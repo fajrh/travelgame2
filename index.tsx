@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const personContainer = document.getElementById('person-container') as HTMLElement;
@@ -451,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function pollForUpdates() {
         try {
-            const response = await fetch('/chatlog.txt');
+            const response = await fetch('/state');
             if (!response.ok) {
                 throw new Error(`Failed to fetch state: ${response.statusText}`);
             }
@@ -1827,8 +1828,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </button>
                         `).join('');
                     }
-                     itemsHTML += `<button class="gift-item button-14 recipe-item" role="button" data-name="${flight.recipe.name}" data-type="recipe" id="recipe-btn-${flight.recipe.name.replace(/\s+/g, '-')}"
->
+                     itemsHTML += `<button class="gift-item button-14 recipe-item" role="button" data-name="${flight.recipe.name}" data-type="recipe" id="recipe-btn-${flight.recipe.name.replace(/\s+/g, '-')}">
                         📖 ${flight.recipe.name}<br>
                         $${flight.recipe.cost}
                     </button>`;
