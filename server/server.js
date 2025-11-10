@@ -1,7 +1,7 @@
 
 import express from 'express';
 import path from 'path';
-import fs from 'fs'; // Import fs to check for file existence
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const app = express();
@@ -11,30 +11,28 @@ const port = process.env.PORT || 8080;
 const players = new Map();
 let chat = [];
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.join(__dirname, '..');
-const distDir = path.join(rootDir, 'dist');
-const indexPath = path.join(distDir, 'index.html');
+// --- Determine paths relative to the current file ---
+// This is a more robust method than process.cwd() for finding the project root
+// in different environments (like Google Cloud Run buildpacks).
+const __filename = fileURLToPath(import.meta.url); // Path to this file (server.js)
+const __dirname = path.dirname(__filename);       // Path to the 'server' directory
+const projectRoot = path.resolve(__dirname, '..'); // Go up one level to the project root
+const distDir = path.join(projectRoot, 'dist');    // Path to the 'dist' folder
+const indexPath = path.join(distDir, 'index.html'); // Path to the index.html
 
 // --- Log paths for debugging ---
 console.log(`[Server] Starting up...`);
-console.log(`[Server] __dirname: ${__dirname}`);
-console.log(`[Server] Root directory: ${rootDir}`);
-console.log(`[Server] Serving static files from: ${distDir}`);
-console.log(`[Server] Index.html path: ${indexPath}`);
+console.log(`[Server] Current file path (__filename): ${__filename}`);
+console.log(`[Server] Resolved project root: ${projectRoot}`);
+console.log(`[Server] Expecting static files in: ${distDir}`);
+console.log(`[Server] Expecting index.html at: ${indexPath}`);
 
 // Check if the dist directory and index.html exist
 if (fs.existsSync(distDir) && fs.existsSync(indexPath)) {
-    console.log(`[Server] ✅ Found 'dist' directory and 'index.html'.`);
+    console.log(`[Server] ✅ Found 'dist' directory and 'index.html'. Serving static files.`);
 } else {
-    console.error(`[Server] ❌ CRITICAL: Could not find 'dist/index.html'. Make sure the project is built ('npm run build').`);
-    if (!fs.existsSync(distDir)) {
-        console.error(`[Server] 'dist' directory is missing.`);
-    }
-    if (!fs.existsSync(indexPath)) {
-        console.error(`[Server] 'index.html' is missing inside 'dist'.`);
-    }
+    console.error(`[Server] ❌ CRITICAL: Could not find build files. The server expects 'index.html' to be at the following path: ${indexPath}`);
+    console.error(`[Server] Please ensure you have run 'npm run build' and the resulting 'dist' directory is present at the project root.`);
 }
 
 // Middleware
