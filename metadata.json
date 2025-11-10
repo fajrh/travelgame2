@@ -1,0 +1,5 @@
+{
+  "name": "GitHub Starter Project Generator",
+  "description": "An application that takes a GitHub repository URL, analyzes it using the Gemini API, and generates a suggested project name, description, and a comprehensive README.md file to help you get started.",
+  "requestFramePermissions": []
+}
