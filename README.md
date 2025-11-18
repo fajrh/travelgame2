@@ -48,3 +48,22 @@ This will create a `dist` directory with all the static files needed to host the
 ```bash
 npm run preview
 ```
+## Deploying to Cloud Run (buildpacks, no Dockerfile needed)
+
+Cloud Run can build and run this project directly from source using the Node.js buildpack (no custom Dockerfile required):
+
+1. Make sure you have built assets available in `dist` by running `npm run build`, or let Cloud Build run the script automatically from the `build` entry in `package.json`.
+2. Deploy from source:
+
+```bash
+gcloud run deploy travelgame2 \
+  --source . \
+  --region YOUR_REGION \
+  --allow-unauthenticated
+```
+
+The buildpack will:
+
+- Run `npm install` (lockfile optional) followed by `npm run build`.
+- Launch the app using `npm start`, which serves the built `dist` directory through `server/server.js` on port 8080.
+- Build the container image automatically—no Dockerfile or `cloudbuild.yaml` is required for this path.
