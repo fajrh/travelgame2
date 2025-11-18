@@ -1349,6 +1349,11 @@
 
         #kitchen-items-layer, #worker-layer { position: relative; min-height: 90px; overflow: hidden; }
         .kitchen-item { position: absolute; font-size: 24px; transform: translate(-50%, -50%); transition: transform 0.2s linear; }
+        .flying-token { position: fixed; z-index: 200; font-size: 26px; transition: transform 0.55s ease, opacity 0.55s ease; transform: translate(-50%, -50%) scale(0.8); opacity: 0.95; }
+        .flying-token.fly { transform: translate(calc(var(--tx) - 50%), calc(var(--ty) - 50%)) scale(1.1); opacity: 0; }
+        .station-bubble { position: absolute; right: 10px; top: -6px; background: #fffaf3; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 4px 8px; font-size: 14px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); animation: popIn 0.35s ease forwards; }
+        .stack-item.entering { animation: popIn 0.3s ease; }
+        @keyframes popIn { from { transform: translateY(8px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
         .worker { position: absolute; top: 60%; font-size: 26px; }
         #worker-runner { animation: runner-loop 4s linear infinite; }
         @keyframes runner-loop {
@@ -1608,9 +1613,10 @@
             <div id="cafe-instruction-ribbon" class="cafe-steps-banner show">
                 <div class="cafe-ribbon-steps">
                     <span class="cafe-ribbon-step">① Tap the Potato Bin 🥔</span>
-                    <span class="cafe-ribbon-step">② Tap the Fryer 🔥</span>
-                    <span class="cafe-ribbon-step">③ Tap Pass Window 📦</span>
-                    <span class="cafe-ribbon-step">④ Tap Order Card ✔</span>
+                    <span class="cafe-ribbon-step">② Slice Potatoes 🔪</span>
+                    <span class="cafe-ribbon-step">③ Fry to Golden 🍟</span>
+                    <span class="cafe-ribbon-step">④ Tap Pass Window 📦</span>
+                    <span class="cafe-ribbon-step">⑤ Tap Order Card ✔</span>
                 </div>
                 <div class="cafe-ribbon-actions">
                     <button id="cafe-ribbon-close">Hide</button>
@@ -1700,10 +1706,10 @@
             <div class="tutorial-card">
                 <h3>Quick Onboarding</h3>
                 <ol class="tutorial-list">
-                    <li>Tap <strong>Potato Bin</strong> to pick up 1 potato.</li>
-                    <li>Tap <strong>Fryer</strong> to cook fries.</li>
-                    <li>Tap the <strong>Pass Window</strong> to place the dish.</li>
-                    <li>Tap the <strong>Order Card</strong> to serve and collect 💵.</li>
+                    <li>Tap <strong>Potato Bin</strong> to pick up 1 potato (or click loose potatoes).</li>
+                    <li>Tap <strong>Prep Station</strong> to slice what you carry.</li>
+                    <li>Tap the <strong>Fryer</strong> to cook and send dishes to the pass.</li>
+                    <li>Tap the <strong>Order Card</strong> to serve from the pass and collect 💵.</li>
                 </ol>
                 <button id="cafe-close-tutorial">Got it</button>
             </div>
