@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cafeTutorialOverlay = document.getElementById('cafe-tutorial-overlay') as HTMLElement;
     const cafeTutorialClose = document.getElementById('cafe-close-tutorial') as HTMLButtonElement;
     const kitchenItemsLayer = document.getElementById('kitchen-items-layer') as HTMLElement;
+    const cafePassWindow = document.getElementById('cafe-pass-window') as HTMLElement;
 
 
     // --- Audio Engine ---
@@ -1451,6 +1452,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Cafe Tycoon Logic ---
+    function launchKitchenToken(icon: string, fromEl: HTMLElement | null, toEl: HTMLElement | null, extraClass = '') {
+        if (!fromEl || !toEl || !cafeWorldContainer) return;
+        const from = fromEl.getBoundingClientRect();
+        const to = toEl.getBoundingClientRect();
+        const token = document.createElement('div');
+        token.className = `flying-token ${extraClass}`.trim();
+        token.textContent = icon;
+        cafeWorldContainer.appendChild(token);
+
+        token.style.left = `${from.left + from.width / 2}px`;
+        token.style.top = `${from.top + from.height / 2}px`;
+
+        requestAnimationFrame(() => {
+            token.style.setProperty('--tx', `${to.left + to.width / 2}px`);
+            token.style.setProperty('--ty', `${to.top + to.height / 2}px`);
+            token.classList.add('fly');
+        });
+
+        setTimeout(() => token.remove(), 650);
+    }
+
+    function pulseStation(station: HTMLElement, emoji = '✨') {
+        const bubble = document.createElement('div');
+        bubble.className = 'station-bubble';
+        bubble.textContent = emoji;
+        station.appendChild(bubble);
+        setTimeout(() => bubble.remove(), 450);
+    }
+
+    function createReadyDish(dish: CafeDish, sourceEl?: HTMLElement | null) {
+        const item = document.createElement('div');
+        item.className = 'stack-item entering';
+        item.innerHTML = `<span class="plate">${dish.emoji}</span> <span>${dish.name}</span>`;
+        cafeDishStack.prepend(item);
+        cafeReadyDishes.unshift({ dish, element: item, createdAt: Date.now() });
+        if (sourceEl) {
+            launchKitchenToken(dish.emoji, sourceEl, cafeDishStack, 'to-pass');
+        }
+        updateDishStackPositions();
+        refreshCafeHUD();
+    }
+
     function resetCafeStacks() {
         cafeQueue.innerHTML = '';
         cafeDishStack.innerHTML = '';
@@ -1568,15 +1611,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function cookCafeDishForQueue() {
         if (!cafeActive || cafeActiveMenu.length === 0) return;
+        if (carryType !== 'sliced' || carriedItems === 0) return;
         const waitingOrder = cafeCustomers.find(c => c.state === 'queue');
         const dish = waitingOrder?.order ?? cafeActiveMenu[Math.floor(Math.random() * cafeActiveMenu.length)];
-        const item = document.createElement('div');
-        item.className = 'stack-item';
-        item.innerHTML = `<span class="plate">${dish.emoji}</span> <span>${dish.name}</span>`;
-        cafeDishStack.appendChild(item);
-        cafeReadyDishes.unshift({ dish, element: item, createdAt: Date.now() });
-        updateDishStackPositions();
-        refreshCafeHUD();
+        for (let i = 0; i < carriedItems; i++) {
+            createReadyDish(dish, stationFryer);
+        }
+        resetCarry();
     }
 
     function placeCustomerAtTable(customer: CafeCustomer) {
@@ -1593,12 +1634,13 @@ document.addEventListener('DOMContentLoaded', () => {
         customer.seatEl = seated;
     }
 
-    function addCafeCash(amount: number, isTip: boolean) {
+    function addCafeCash(amount: number, isTip: boolean, sourceEl?: HTMLElement | null) {
         const item = document.createElement('div');
         item.className = `cash-item ${isTip ? 'tip' : ''}`;
         item.textContent = isTip ? '💰' : '💵';
         cafeCashStack.appendChild(item);
         cafeCashDrops.unshift({ value: amount, element: item, isTip });
+        if (sourceEl) launchKitchenToken(isTip ? '💰' : '💵', sourceEl, cafeCashStack, 'cash');
         updateCashStackPositions();
         refreshCafeHUD();
     }
@@ -1625,6 +1667,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const matchingIndex = cafeReadyDishes.findIndex(stack => stack.dish.emoji === nextCustomer.order.emoji);
         const stackItem = matchingIndex >= 0 ? cafeReadyDishes.splice(matchingIndex, 1)[0] : cafeReadyDishes.pop();
         if (!stackItem) return;
+        const tables = Array.from(cafeCustomerTables.children) as HTMLElement[];
+        const targetTable = tables[nextCustomer.tableIndex ?? 0];
+        launchKitchenToken(stackItem.dish.emoji, stackItem.element, targetTable, 'serve');
         stackItem.element.remove();
         updateDishStackPositions();
 
@@ -1641,7 +1686,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tipChance = nextCustomer.order.signature ? 0.35 : 0.15;
             const tip = Math.random() < tipChance;
             const reward = nextCustomer.order.reward + (tip ? Math.round(nextCustomer.order.reward * 0.3) : 0);
-            addCafeCash(reward, tip);
+            addCafeCash(reward, tip, nextCustomer.seatEl ?? targetTable);
             nextCustomer.seatEl?.remove();
             cafeCustomers = cafeCustomers.filter(c => c.id !== nextCustomer.id);
             refreshCafeHUD();
@@ -1711,7 +1756,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 cafeLoopTimers.spawn -= 3500;
             }
             while (cafeLoopTimers.kitchen >= 2600) {
-                cookCafeDishForQueue();
+                if (hasCook) {
+                    cookCafeDishForQueue();
+                }
                 cafeLoopTimers.kitchen -= 2600;
             }
             while (cafeLoopTimers.serve >= 1500) {
@@ -1754,6 +1801,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function spawnPotato() {
         if (!cafeActive || !kitchenItemsLayer) return;
+        if (potatoes.length >= 6) return;
         const pot = document.createElement('span');
         pot.className = 'kitchen-item potato';
         pot.textContent = '🥔';
@@ -1766,7 +1814,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isInteracting) return;
             if (carryType !== 'none' && carryType !== 'potato') return;
             if (carriedItems >= maxCarry) return;
-            
+
             isInteracting = true;
             await moveEntityInCafe(pot);
 
@@ -1775,6 +1823,7 @@ document.addEventListener('DOMContentLoaded', () => {
             carriedItems++;
             carryType = 'potato';
             updateCarryCounter();
+            launchKitchenToken('🥔', pot, carryCounter, 'pickup');
             playSound('click');
             isInteracting = false;
         });
@@ -1800,27 +1849,32 @@ document.addEventListener('DOMContentLoaded', () => {
         isInteracting = true;
         await moveEntityInCafe(station as HTMLElement);
 
-        if (type === 'slicer' && carryType === 'potato' && carriedItems > 0) {
-            carriedItems--;
-            if (carriedItems === 0) carryType = 'sliced';
+        if (type === 'potato') {
+            if (carryType === 'none' || carryType === 'potato') {
+                pulseStation(station as HTMLElement, '🥔');
+                carriedItems = Math.min(maxCarry, carriedItems + 1);
+                carryType = 'potato';
+                launchKitchenToken('🥔', station as HTMLElement, carryCounter, 'pickup');
+                updateCarryCounter();
+                playSound('click');
+            }
+        } else if (type === 'slicer' && carryType === 'potato' && carriedItems > 0) {
+            carryType = 'sliced';
+            pulseStation(station as HTMLElement, '🔪');
+            launchKitchenToken('🔪', station as HTMLElement, carryCounter, 'prep');
             updateCarryCounter();
             playSound('click');
-            const icon = station.querySelector('.station-icon')!;
-            const originalIcon = icon.textContent;
-            icon.textContent = '✅';
-            setTimeout(() => icon.textContent = originalIcon, 800);
-        } else if (type === 'fryer' && carryType === 'sliced') {
-            const fries = document.createElement('div');
-            fries.className = 'serving-slot';
-            fries.textContent = '🍟';
-            servingSlots.appendChild(fries);
+        } else if (type === 'fryer' && carryType === 'sliced' && carriedItems > 0) {
+            const batches = carriedItems;
+            pulseStation(station as HTMLElement, '🔥');
+            for (let i = 0; i < batches; i++) {
+                const waitingOrder = cafeCustomers.find(c => c.state === 'queue');
+                const dish = waitingOrder?.order ?? cafeActiveMenu[0] ?? { name: 'Fries', emoji: '🍟', reward: 120, city: cafeBranchCity };
+                createReadyDish(dish, station as HTMLElement);
+            }
+            launchKitchenToken('🍟', station as HTMLElement, cafeDishStack, 'cook');
             resetCarry();
-            updateScore(10);
             playSound('earn');
-            showEarningToast(10);
-            setTimeout(() => {
-                if (fries.isConnected) fries.remove();
-            }, 3000);
         }
 
         isInteracting = false;
@@ -1909,35 +1963,34 @@ document.addEventListener('DOMContentLoaded', () => {
              if (isCookBusy || carriedItems === 0) return;
 
              isCookBusy = true;
-             
+
              if(carryType === 'potato') {
                 const slicerRect = stationSlicer.getBoundingClientRect();
                 cafeWorkerCook.style.transform = `translate(${slicerRect.left}px, ${slicerRect.top}px)`;
-                await new Promise(r => setTimeout(r, 1000));
-
-                carriedItems--;
-                if(carriedItems === 0) carryType = 'sliced';
+                await new Promise(r => setTimeout(r, 800));
+                carryType = 'sliced';
+                launchKitchenToken('🔪', stationSlicer, carryCounter, 'prep');
                 updateCarryCounter();
              }
-             
+
              if(carryType === 'sliced') {
                 const fryerRect = stationFryer.getBoundingClientRect();
                 cafeWorkerCook.style.transform = `translate(${fryerRect.left}px, ${fryerRect.top}px)`;
-                await new Promise(r => setTimeout(r, 1000));
-                
-                const fries = document.createElement('div');
-                fries.className = 'serving-slot';
-                fries.textContent = '🍟';
-                servingSlots.appendChild(fries);
+                await new Promise(r => setTimeout(r, 900));
+
+                const batches = carriedItems;
+                for (let i = 0; i < batches; i++) {
+                    const waitingOrder = cafeCustomers.find(c => c.state === 'queue');
+                    const dish = waitingOrder?.order ?? cafeActiveMenu[0] ?? { name: 'Fries', emoji: '🍟', reward: 120, city: cafeBranchCity };
+                    createReadyDish(dish, stationFryer);
+                }
+                launchKitchenToken('🍟', stationFryer, cafeDishStack, 'cook');
                 resetCarry();
-                updateScore(10);
-                showEarningToast(10);
-                setTimeout(() => { if (fries.isConnected) fries.remove(); }, 3000);
              }
 
              const startRect = stationSlicer.getBoundingClientRect();
              cafeWorkerCook.style.transform = `translate(${startRect.right + 20}px, ${startRect.top}px)`;
-             await new Promise(r => setTimeout(r, 1000));
+             await new Promise(r => setTimeout(r, 700));
 
              isCookBusy = false;
 
@@ -2264,6 +2317,11 @@ document.addEventListener('DOMContentLoaded', () => {
     cafeCashStack.addEventListener('click', () => {
         if (!cafeActive) return;
         collectCafeCash();
+    });
+
+    cafeOrdersList?.addEventListener('click', () => {
+        if (!cafeActive) return;
+        serveCafeQueue();
     });
 
     cafeRibbonClose?.addEventListener('click', hideCafeRibbon);
