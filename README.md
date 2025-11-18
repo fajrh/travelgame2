@@ -64,6 +64,6 @@ gcloud run deploy travelgame2 \
 
 The buildpack will:
 
-- Run `npm install` (lockfile optional) followed by `npm run build`.
+- Run `npm install` (lockfile optional) followed by `npm run build`. A `.npmrc` disables lockfile generation to force `npm install` instead of `npm ci` in Cloud Build.
 - Launch the app using `npm start`, which serves the built `dist` directory through `server/server.js` on port 8080.
 - Build the container image automatically—no Dockerfile or `cloudbuild.yaml` is required for this path.
