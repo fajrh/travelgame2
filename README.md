@@ -1,61 +1,50 @@
 
 # Travel Game
 
-A multiplayer travel and exploration game. Player progress is saved in your browser, and multiplayer interactions are handled in real-time.
+A solo travel and exploration game. Player progress is saved in your browser, allowing for offline play.
 
-## No Database Required!
+## Offline First!
 
-This project runs with a simple in-memory Node.js server and does not require any database connection, which keeps things simple and avoids cloud costs.
+This project runs entirely in your browser and does not require any backend server or database connection.
 
--   **Backend**: A lightweight [Express.js](https://expressjs.com/) server handles multiplayer state (player locations, chat) in memory. It automatically clears data for disconnected players.
 -   **Persistence**: Your game progress—money, location, unlocked items, and profile settings—is automatically saved to your browser's local storage. When you return, you'll pick up right where you left off.
 
 ## Run Locally
 
 **This project requires Node.js (version 20 or higher) to run.**
 
-### 1. Install Dependencies
+### 1. Clean and Install Dependencies
 
-First, open your terminal in the project's root directory and install the necessary packages. You only need to do this once.
+To ensure a clean, frontend-only setup, please first remove your old `node_modules` directory and `package-lock.json` file.
+
+Then, open your terminal in the project's root directory and install the necessary packages:
 
 ```bash
 npm install
 ```
 
-### 2. Build and Start the Game
+### 2. Start the Development Server
 
-The provided `start` script first builds the application and then runs the server. This is the recommended way to run the game locally as it mirrors a production setup.
+This command will start the Vite development server, allowing you to play the game and see changes live as you edit the code.
 
 ```bash
-npm start
+npm run dev
 ```
-
-You should see a message like `✅ Server listening on port 8080`.
 
 ### 3. Play the Game
 
-Open your web browser and navigate to:
+Open your web browser and navigate to the local URL provided by Vite (usually **http://localhost:5173**).
 
-**http://localhost:8080**
+## Building for Production
 
-## Deploying to the Cloud
-
-You can deploy this application directly to Google Cloud Run without needing to write a `Dockerfile`. Cloud Run uses buildpacks to automatically create a container image from your source code and deploy it.
-
-### 1. Set Your Project (Optional)
-
-If you have multiple Google Cloud projects, make sure your `gcloud` CLI is configured to use the correct one.
+To create an optimized build of the game:
 
 ```bash
-gcloud config set project [YOUR_PROJECT_ID]
+npm run build
 ```
 
-### 2. Deploy from Source
-
-Run the following command from your project's root directory. Replace `[REGION]` with your preferred Google Cloud region (e.g., `us-central1`, `northamerica-northeast2`).
+This will create a `dist` directory with all the static files needed to host the game. You can preview the production build locally with:
 
 ```bash
-gcloud run deploy travelgame --source . --region [REGION] --allow-unauthenticated
+npm run preview
 ```
-
-Cloud Run will build and deploy your application. Once complete, it will provide a public URL where you can access the game. The server is now configured to correctly find and serve the game files in the Cloud Run environment.

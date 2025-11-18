@@ -8,6 +8,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Almendra&family=Amiri&family=Cinzel&family=Great+Vibes&family=Lobster&family=Meie+Script&family=Noto+Nastaliq+Urdu&family=Oswald&family=Parisienne&family=Playfair+Display&family=Poppins&family=Sriracha&family=Ubuntu&family=Yuji+Syuku&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --cafe-bg: #4a3b2a;
+            --station-bg: #7a6349;
+            --station-border: #a0825f;
+            --text-light: #f5eadd;
+            --accent-green: #5cb85c;
+            --accent-blue: #4e9de0;
+        }
+        
         body {
             background-size: cover;
             background-position: center;
@@ -49,6 +58,10 @@
             opacity: 0;
         }
         
+        #world-map.hidden > * {
+            display: none;
+        }
+
         #home-compass {
             position: fixed;
             top: 50%;
@@ -63,31 +76,31 @@
             z-index: 0;
             pointer-events: none;
         }
-
-
-        #score {
+        
+        #score-container {
             position: absolute;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
+            z-index: 105; /* Above cafe view */
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        #score {
             font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
             font-size: 36px;
             font-weight: bold;
             color: yellow;
             text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000;
-            z-index: 15;
         }
 
-        #online-count {
-            position: absolute;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
+        #version-number {
             font-family: Arial, sans-serif;
-            color: #ccc;
-            text-shadow: 1px 1px 1px #000;
-            z-index: 15;
+            font-size: 5pt;
+            color: white;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
         }
 
         #city-title {
@@ -106,18 +119,19 @@
             display: none; /* Hidden by default */
         }
 
-        #person-container, .other-player {
+        #person-container {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 50px;
             height: auto;
             text-align: center;
-            transform: translate(-50%, -50%); 
-            will-change: left, top;
+            will-change: transform;
             z-index: 5;
             overflow: visible;
         }
         
-        #person-emoji, .other-player-emoji {
+        #person-emoji {
             font-size: 40px; /* Slightly smaller */
             line-height: 40px;
             width: 100px; /* Allow space for luggage */
@@ -125,7 +139,7 @@
             transition: transform 0.2s ease;
         }
 
-        #person-label, .other-player-label {
+        #person-label {
             font-size: 12px;
             color: yellow;
             text-shadow: 1px 1px 2px #000;
@@ -143,6 +157,10 @@
             transform: scale(1.1);
         }
         
+        #luggage-container {
+            will-change: transform;
+        }
+
         #luggage-container:hover, #settings-container:hover {
             transform: scale(1.1);
             text-shadow: 0 0 10px gold, 0 0 15px gold;
@@ -190,45 +208,6 @@
             transition: all 0.2s ease-in-out;
         }
 
-        #chat-toggle-button {
-            position: relative;
-            width: 52px;
-            height: 52px;
-            border-radius: 26px;
-            border: 2px solid #ffdf73;
-            background: rgba(38, 27, 72, 0.9);
-            color: #ffe9b6;
-            font-size: 26px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-        }
-
-        #chat-toggle-button:hover,
-        #chat-toggle-button:focus-visible {
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
-            outline: none;
-        }
-
-        #chat-toggle-button.active {
-            background: linear-gradient(180deg, #ffe37a, #ffb347);
-            color: #3a2461;
-        }
-
-        #chat-toggle-button.has-unread::after {
-            content: '•';
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            font-size: 18px;
-            color: #ff4d6d;
-            text-shadow: 0 0 6px rgba(255, 77, 109, 0.9);
-        }
-
         #passport-office-img, #airport-img, #mf-group-img {
             width: 150px;
             height: 150px;
@@ -244,6 +223,39 @@
             top: clamp(12px, 6vh, 64px);
             right: clamp(12px, 6vw, 56px);
             z-index: 80;
+        }
+
+        #away-airport-placeholder.has-thumbnail {
+            width: 150px;
+            height: 150px;
+            border: 4px solid gold;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            padding: 0;
+            min-width: 0;
+            color: transparent;
+            transition: transform 0.2s ease-in-out;
+        }
+        #away-airport-placeholder.has-thumbnail:hover {
+            transform: scale(1.1);
+        }
+        .return-home-text {
+            /* Accessible hidden text */
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        #away-airport-placeholder.has-thumbnail:before,
+        #away-airport-placeholder.has-thumbnail:after {
+            display: none; /* Hide the glowing border and background from .button-85 */
         }
 
         .return-home-button {
@@ -439,7 +451,7 @@
             border-radius: 12px;
             border: 3px solid #9370db;
         }
-        
+
         #restaurant-view-container {
             position: relative;
             padding: 15px;
@@ -664,15 +676,14 @@
         #minigame-title:empty { display: none; }
         
         /* Staff & Menu Dialogs */
-        #restaurant-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; }
-        #staff-controls, #settings-controls { display: flex; gap: 15px; }
+        #staff-controls, #settings-controls, #minigames-controls { display: flex; gap: 15px; }
         
-        #restaurant-dialog, #minigame-dialog {
+        #minigame-dialog {
              background-color: #013220; /* Dark Green fallback */
             background-image: url('https://www.transparenttextures.com/patterns/green-fibers.png');
             border-color: #006400; /* Darker Green */
         }
-         #restaurant-dialog .elegant-title, #minigame-dialog .elegant-title {
+         #minigame-dialog .elegant-title {
             color: #F0E68C; /* Khaki */
             text-shadow: 1px 1px 3px black;
          }
@@ -1201,134 +1212,6 @@
             100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; }
         }
 
-        /* NEW: Chat UI Styles */
-        #chat-container {
-            position: fixed;
-            bottom: 80px;
-            left: 20px;
-            width: 320px;
-            height: 220px;
-            background: radial-gradient(circle at top, rgba(62, 45, 110, 0.92), rgba(22, 18, 45, 0.92));
-            border: 2px solid #ffdf73;
-            border-radius: 14px;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
-            display: flex;
-            flex-direction: column;
-            z-index: 30;
-            font-family: 'Trebuchet MS', 'Lucida Console', monospace;
-            overflow: hidden;
-            backdrop-filter: blur(4px);
-            transition: transform 0.25s ease, opacity 0.25s ease;
-        }
-
-        #chat-container.collapsed {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(20px) scale(0.96);
-        }
-
-        #chat-history {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 10px;
-            font-size: 13px;
-            line-height: 1.4;
-            color: #ffe9b6;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-        }
-
-        #chat-history p {
-            margin: 0 0 5px 0;
-            word-wrap: break-word;
-            padding: 2px 4px;
-        }
-
-        #chat-input-container {
-            display: flex;
-            border-top: 1px solid #9370db;
-        }
-
-        #chat-input {
-            flex-grow: 1;
-            border: none;
-            background: rgba(18, 14, 32, 0.95);
-            color: #ffe9b6;
-            padding: 10px;
-            outline: none;
-            border-bottom-left-radius: 9px;
-        }
-
-        #chat-send-btn {
-            border: none;
-            background: linear-gradient(180deg, #ffe37a, #ffb347);
-            color: #3a2461;
-            padding: 0 18px;
-            cursor: pointer;
-            font-weight: bold;
-            border-bottom-right-radius: 9px;
-            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-        }
-        #chat-send-btn:hover {
-            background: linear-gradient(180deg, #fff1a8, #ffc36a);
-        }
-
-        .chat-bubble {
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translate(-50%, -10px) scale(0.9);
-            max-width: 220px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 236, 177, 0.95));
-            border: 2px solid #4f2a7f;
-            border-radius: 16px;
-            color: #322553;
-            padding: 8px 12px;
-            font-size: 13px;
-            line-height: 1.3;
-            font-weight: 600;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s ease, transform 0.25s ease;
-            white-space: normal;
-            text-align: center;
-            z-index: 20;
-            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-        }
-
-        .chat-bubble.visible {
-            opacity: 1;
-            transform: translate(-50%, -24px) scale(1);
-            animation: bubble-pop 0.25s ease-out;
-        }
-
-        .chat-bubble::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 10px 10px 0 10px;
-            border-style: solid;
-            border-color: rgba(255, 236, 177, 0.95) transparent transparent transparent;
-            filter: drop-shadow(0 -2px 0 #4f2a7f);
-        }
-
-        @keyframes bubble-pop {
-            0% {
-                opacity: 0;
-                transform: translate(-50%, 0) scale(0.6);
-            }
-            70% {
-                opacity: 1;
-                transform: translate(-50%, -28px) scale(1.05);
-            }
-            100% {
-                opacity: 1;
-                transform: translate(-50%, -24px) scale(1);
-            }
-        }
-
         /* Loading Screen */
         #loading-screen {
             position: fixed;
@@ -1360,14 +1243,61 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
+        /* NEW CAFE-TYCOON STYLES */
+        #cafe-world-container {
+            position: fixed;
+            top: 0; left: 0;
+            width:100vw; height:100vh;
+            background:#f9e4b7;
+            overflow:hidden;
+            z-index: 100;
+        }
+        .cafe-floor { position:absolute; inset:0; background:#d2b48c; }
+        .potato { position:absolute; font-size:2rem; cursor:pointer; user-select:none; }
+        .station { position:absolute; width:120px; height:120px; background:#fff; border:4px solid #8b5a2b; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:1rem; }
+        .station-icon { font-size:2.5rem; }
+        .station-name { margin-top:4px; font-weight:bold; }
+        .carry-counter { position:absolute; top:20px; left:20px; z-index: 101; background:rgba(0,0,0,0.6); color:#fff; padding:4px 8px; border-radius:6px; font-weight:bold; }
+        .fryer { background:#ff4444; }
+        .slicer { background:#44aaff; }
+        .ingredient-bin { background:#aaff44; }
+        .serving-slot { width:80px; height:80px; background:#ffeb3b; margin:4px; display:flex; align-items:center; justify-content:center; font-size:2rem; }
+        #serving-slots { display:flex; flex-wrap:wrap; gap:8px; padding:8px; position: absolute; bottom: 20px; left: 20px; }
+        #cafe-player, .cafe-worker {
+            position: absolute;
+            font-size: 2.5rem;
+            will-change: transform;
+            z-index: 2;
+            transition: transform 0.1s linear;
+        }
+        #cafe-instructions {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 101;
+            pointer-events: none;
+        }
+        #cafe-upgrades-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 101;
+        }
 
         @media (max-width: 1024px) {
-            #score {
-                font-size: 28px;
+            #score-container {
                 top: 12px;
             }
-            #online-count {
-                top: 44px;
+            #score {
+                font-size: 28px;
             }
             #city-title {
                 top: 54px;
@@ -1415,13 +1345,6 @@
                 transform: none;
                 width: min(150px, 40vw);
             }
-            #chat-container {
-                width: min(360px, calc(100vw - 32px));
-                left: clamp(12px, 6vw, 48px);
-                transform: none;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
-                height: min(200px, 28vh);
-            }
             #away-airport-placeholder {
                 top: calc(env(safe-area-inset-top, 0px) + 14px);
                 right: clamp(12px, 8vw, 28px);
@@ -1432,16 +1355,7 @@
                 min-width: 160px;
                 gap: 0.45em;
             }
-            #chat-history {
-                font-size: 12px;
-            }
-            #chat-input {
-                font-size: 14px;
-            }
-            #chat-send-btn {
-                padding: 0 14px;
-            }
-            #person-container, .other-player {
+            #person-container {
                 transform: translate(-50%, -50%) scale(0.9);
             }
             .city-image-container {
@@ -1459,11 +1373,11 @@
                 height: 40px;
                 font-size: 22px;
             }
+            #score-container {
+                top: 12px;
+            }
             #score {
                 font-size: 24px;
-            }
-            #online-count {
-                top: 48px;
             }
             #city-title {
                 top: 58px;
@@ -1493,22 +1407,8 @@
                 top: 160px;
                 width: min(130px, 35vw);
              }
-            #chat-container {
-                height: min(180px, 25vh);
-                width: calc(100vw - 20px);
-                left: 10px;
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
-            }
-            #chat-history {
-                font-size: 11px;
-            }
-            #chat-input {
-                font-size: 13px;
-                padding: 8px;
-            }
-            #chat-send-btn {
-                font-size: 13px;
-                padding: 0 12px;
+            .city-image-container {
+                bottom: calc(34vh + 80px);
             }
             .city-image-container img {
                 max-width: 95vw;
@@ -1518,7 +1418,7 @@
                 bottom: calc(34vh + 80px);
             }
             #toast-container {
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 220px);
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
             }
         }
     </style>
@@ -1548,74 +1448,100 @@
         <p>Loading your adventure...</p>
     </div>
 
-    <div id="score">$0</div>
-    <div id="online-count"></div>
+    <div id="score-container">
+        <div id="score">$0</div>
+        <div id="version-number">v1.2</div>
+    </div>
     <div id="toast-container"></div>
     <div id="flight-tooltip"></div>
-    <div id="city-title"></div>
-    <div id="home-compass"></div>
     
-    <div id="visited-cities-list" class="hidden">
-        <h3>Visited</h3>
-        <ul id="visited-list"></ul>
+    <main id="world-map">
+        <div id="city-title"></div>
+        <div id="home-compass"></div>
+        
+        <div id="visited-cities-list" class="hidden">
+            <h3>Visited</h3>
+            <ul id="visited-list"></ul>
+        </div>
+        
+        <div id="passport-office-container">
+            <img id="passport-office-img" src="https://i.ibb.co/ks0NNSgv/passportoffice.jpg" alt="Passport Office">
+            <div class="location-label">Passport Office</div>
+        </div>
+        
+        <button id="restaurant-container" class="hidden button-85" role="button">Restaurant</button>
+        <button id="gift-shop-container" class="hidden button-85" role="button">🎁 Gift Shop</button>
+
+        <div id="airport-container">
+            <img id="airport-img" src="https://i.ibb.co/GvTXp9Kt/yyz.png" alt="Toronto Pearson Airport">
+            <div id="airport-label" class="location-label">Airport</div>
+        </div>
+        <button id="away-airport-placeholder" class="hidden button-85 return-home-button" role="button"></button>
+
+        <div id="mf-group-container">
+            <img id="mf-group-img" src="https://i.ibb.co/Kj6yG9Wr/cafe.png" alt="My Restaurant">
+            <div class="location-label">Fajr's Café</div>
+        </div>
+
+        <div id="home-bottom-left-controls">
+            <div id="luggage-container">🧳</div>
+            <div id="settings-container">⚙️</div>
+        </div>
+        
+        <div id="city-image-container" class="city-image-container hidden">
+            <img id="city-image" src="" alt="City View">
+        </div>
+
+        <div id="city-emojis"></div>
+        <div id="caption-container"></div>
+
+        <div id="person-container">
+            <div id="person-emoji">🚶</div>
+            <div id="person-label">Person</div>
+        </div>
+
+    </main>
+    
+    <!-- FAJR'S CAFE TYCOON VIEW -->
+    <div id="cafe-world-container" class="hidden">
+        <div class="cafe-floor"></div>
+        <div id="cafe-instructions">Click 🥔 to pick up, then click stations to process!</div>
+        <div id="carry-counter" class="carry-counter">Carrying: 0</div>
+
+        <!-- Stations (static positions) -->
+        <div id="station-potato-bin" class="station ingredient-bin" data-type="ingredient" style="left:10%;top:20%;">
+            <div class="station-icon">🥔</div>
+            <div class="station-name">Potato Bin</div>
+        </div>
+
+        <div id="station-slicer" class="station slicer" data-type="slicer" style="left:45%;top:20%;">
+            <div class="station-icon">🔪</div>
+            <div class="station-name">Slicer</div>
+        </div>
+
+        <div id="station-fryer" class="station fryer" data-type="fryer" style="left:80%;top:20%;">
+            <div class="station-icon">🔥</div>
+            <div class="station-name">Fryer</div>
+        </div>
+
+        <div id="serving-slots"></div>
+
+        <div id="cafe-player">🧍</div>
+        <div id="cafe-worker-collector" class="cafe-worker hidden">👨‍🌾</div>
+        <div id="cafe-worker-cook" class="cafe-worker hidden">👨‍🍳</div>
+
+        <button id="return-to-world-btn" class="button-85" role="button" style="position:absolute;bottom:20px;right:20px;">Back to World</button>
+        <button id="cafe-upgrades-btn" class="button-85" role="button">Upgrades</button>
     </div>
-    
+
+
+    <!-- DIALOGS -->
     <div id="souvenirs-container" class="dialog-container hidden">
         <div id="exit-dialog-btn" data-dialog="souvenirs-container">X</div>
         <h3>Souvenirs</h3>
         <div id="souvenirs-list"></div>
     </div>
-
-    <div id="passport-office-container">
-        <img id="passport-office-img" src="https://i.ibb.co/ks0NNSgv/passportoffice.jpg" alt="Passport Office">
-        <div class="location-label">Passport Office</div>
-    </div>
     
-    <button id="restaurant-container" class="hidden button-85" role="button">Restaurant</button>
-    <button id="gift-shop-container" class="hidden button-85" role="button">🎁 Gift Shop</button>
-
-    <div id="airport-container">
-        <img id="airport-img" src="https://i.ibb.co/GvTXp9Kt/yyz.png" alt="Toronto Pearson Airport">
-        <div id="airport-label" class="location-label">Airport</div>
-    </div>
-    <button id="away-airport-placeholder" class="hidden button-85 return-home-button" role="button"></button>
-
-    <div id="mf-group-container">
-        <img id="mf-group-img" src="https://i.ibb.co/Kj6yG9Wr/cafe.png" alt="My Restaurant">
-        <div class="location-label">Fajr's Café</div>
-    </div>
-
-    <div id="home-bottom-left-controls">
-        <button id="chat-toggle-button" type="button" aria-label="Toggle chat" aria-controls="chat-container" aria-expanded="true">💬</button>
-        <div id="luggage-container">🧳</div>
-        <div id="settings-container">⚙️</div>
-    </div>
-    
-    <div id="city-image-container" class="city-image-container hidden">
-        <img id="city-image" src="" alt="City View">
-    </div>
-
-    <div id="city-emojis"></div>
-    <div id="caption-container"></div>
-
-    <div id="person-container">
-        <div id="person-emoji">🚶</div>
-        <div id="person-label">Person</div>
-        <div id="self-chat-bubble" class="chat-bubble hidden"></div>
-    </div>
-
-    <div id="other-players-container"></div>
-
-    <div id="chat-container">
-        <div id="chat-history"></div>
-        <div id="chat-input-container">
-            <input type="text" id="chat-input" placeholder="Say something..." maxlength="100">
-            <button id="chat-send-btn">Send</button>
-        </div>
-    </div>
-
-
-    <!-- DIALOGS -->
     <div id="officer-message" class="dialog-container hidden">
         <div id="officer-emoji">👮</div>
         <div id="speech-bubble">You must have a passport to travel</div>
@@ -1626,11 +1552,10 @@
         <button id="apply-passport-btn" class="button-5" role="button">Apply for passport $200</button>
     </div>
 
-    <div id="restaurant-dialog" class="dialog-container hidden green-felt-bg">
-        <h3 class="elegant-title" style="font-size: 36px;">Fajr's Café</h3>
-        <div id="restaurant-controls">
-            <button id="work-shift-btn" class="button-5" role="button">Work Shift</button>
-            <button id="manage-staff-btn" class="button-5" role="button">Manage Staff</button>
+    <div id="minigames-dialog-selection" class="dialog-container hidden green-felt-bg">
+        <div id="exit-dialog-btn" data-dialog="minigames-dialog-selection">X</div>
+        <h3 class="elegant-title">Minigames</h3>
+        <div id="minigames-controls">
             <button id="memory-match-btn" class="button-5" role="button" data-unlock-text="Visit 2 Cities">Memory Match</button>
             <button id="gem-swap-btn" class="button-5" role="button" data-unlock-text="Visit 5 Cities">Gem Swap</button>
         </div>
@@ -1751,6 +1676,16 @@
             <span id="visa-sticker-emoji"></span>
         </div>
     </div>
+    
+    <div id="cafe-upgrades-dialog" class="dialog-container hidden green-felt-bg">
+        <div id="exit-dialog-btn" data-dialog="cafe-upgrades-dialog">X</div>
+        <h3>Cafe Upgrades</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button id="hire-collector-btn" class="button-5" role="button">Hire Collector ($500)</button>
+            <button id="hire-cook-btn" class="button-5" role="button">Hire Cook ($1500)</button>
+        </div>
+    </div>
+
 
     <div id="recipe-celebration" class="hidden"></div>
     <div id="memory-game-win-celebration" class="hidden"></div>

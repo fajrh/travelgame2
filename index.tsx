@@ -1,6 +1,6 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
+    const worldMap = document.getElementById('world-map') as HTMLElement;
     const personContainer = document.getElementById('person-container') as HTMLElement;
     const personEmoji = document.getElementById('person-emoji') as HTMLElement;
     const personLabel = document.getElementById('person-label') as HTMLElement;
@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const successMessage = document.getElementById('success-message') as HTMLElement;
     const successText = document.getElementById('success-text') as HTMLElement;
     const scoreEl = document.getElementById('score') as HTMLElement;
-    const onlineCountEl = document.getElementById('online-count') as HTMLElement;
     const flightsDialog = document.getElementById('flights-dialog') as HTMLElement;
     const flightsContainer = document.getElementById('flights-container') as HTMLElement;
     const flightTooltip = document.getElementById('flight-tooltip') as HTMLElement;
@@ -44,12 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const souvenirsContainer = document.getElementById('souvenirs-container') as HTMLElement;
     const souvenirsList = document.getElementById('souvenirs-list') as HTMLElement;
     
-    // Restaurant & Minigame Elements
-    const restaurantDialog = document.getElementById('restaurant-dialog') as HTMLElement;
+    // Restaurant & Minigame Elements (Legacy and repurposed)
     const minigameDialog = document.getElementById('minigame-dialog') as HTMLElement;
     const staffDialog = document.getElementById('staff-dialog') as HTMLElement;
-    const workShiftBtn = document.getElementById('work-shift-btn') as HTMLButtonElement;
-    const manageStaffBtn = document.getElementById('manage-staff-btn') as HTMLButtonElement;
     const memoryMatchBtn = document.getElementById('memory-match-btn') as HTMLButtonElement;
     const gemSwapBtn = document.getElementById('gem-swap-btn') as HTMLButtonElement;
     const friesContainer = document.getElementById('fries-container') as HTMLElement;
@@ -74,15 +70,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsOkBtn = document.getElementById('settings-ok-btn') as HTMLButtonElement;
     const emojiOptionButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-emoji-option]'));
 
-    // Multiplayer and Chat Elements
-    const otherPlayersContainer = document.getElementById('other-players-container') as HTMLElement;
-    const chatContainer = document.getElementById('chat-container') as HTMLElement;
-    const chatHistory = document.getElementById('chat-history') as HTMLElement;
-    const chatInput = document.getElementById('chat-input') as HTMLInputElement;
-    const chatSendBtn = document.getElementById('chat-send-btn') as HTMLButtonElement;
-    const selfChatBubble = document.getElementById('self-chat-bubble') as HTMLElement;
-    const chatToggleButton = document.getElementById('chat-toggle-button') as HTMLButtonElement | null;
-    const chatToggleDefaultLabel = chatToggleButton?.getAttribute('aria-label') || 'Toggle chat';
+    // --- NEW Cafe Tycoon Elements ---
+    const cafeWorldContainer = document.getElementById('cafe-world-container') as HTMLElement;
+    const carryCounter = document.getElementById('carry-counter') as HTMLElement;
+    const servingSlots = document.getElementById('serving-slots') as HTMLElement;
+    const returnToWorldBtn = document.getElementById('return-to-world-btn') as HTMLButtonElement;
+    const cafePlayer = document.getElementById('cafe-player') as HTMLElement;
+    const cafeUpgradesBtn = document.getElementById('cafe-upgrades-btn') as HTMLButtonElement;
+    const cafeUpgradesDialog = document.getElementById('cafe-upgrades-dialog') as HTMLElement;
+    const hireCollectorBtn = document.getElementById('hire-collector-btn') as HTMLButtonElement;
+    const hireCookBtn = document.getElementById('hire-cook-btn') as HTMLButtonElement;
+    const cafeWorkerCollector = document.getElementById('cafe-worker-collector') as HTMLElement;
+    const cafeWorkerCook = document.getElementById('cafe-worker-cook') as HTMLElement;
+    const stationPotatoBin = document.getElementById('station-potato-bin') as HTMLElement;
+    const stationSlicer = document.getElementById('station-slicer') as HTMLElement;
+    const stationFryer = document.getElementById('station-fryer') as HTMLElement;
 
 
     // --- Audio Engine ---
@@ -239,48 +241,39 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasPlayedMinigame = false;
     let haveMinigamesBeenUnlocked = false;
     
-    // --- Multiplayer State ---
-    interface OtherPlayer {
-        id: string;
-        name: string;
-        emoji: string;
-        x: number;
-        y: number;
-        targetX: number;
-        targetY: number;
-        zone: string;
-        city: string;
-        isFacingRight: boolean;
-        element: HTMLElement;
-        emojiElement: HTMLElement;
-        labelElement: HTMLElement;
-        bubbleElement: HTMLElement;
-        color: string;
-    }
-
-    let selfId = localStorage.getItem('travelerId') || crypto.randomUUID();
-    localStorage.setItem('travelerId', selfId);
-
-    const otherPlayers = new Map<string, OtherPlayer>();
-    let lastChatTimestamp = 0;
-    let lastPlayerState = {};
-    let updateTimeout: number | null = null;
+    // --- Cafe Tycoon State ---
+    let cafeActive = false;
+    let potatoes: HTMLElement[] = [];
+    let carriedItems = 0;
+    let maxCarry = 10;
+    let carryType: 'none' | 'potato' | 'sliced' = 'none';
+    const POTATO_SPAWN_INTERVAL = 3000; // ms
+    let potatoSpawnTimer: number | null = null;
+    let cafePlayerX = window.innerWidth / 2, cafePlayerY = window.innerHeight / 2;
+    let cafePlayerTargetX = cafePlayerX, cafePlayerTargetY = cafePlayerY;
+    let currentCafeMovePromise: Function | null = null;
+    let hasCollector = false;
+    let hasCook = false;
+    let collectorIntervalId: number | null = null;
+    let cookIntervalId: number | null = null;
+    let isCollectorBusy = false;
+    let isCookBusy = false;
 
 
     // --- Data ---
     const flightData = [
-        { city: 'Istanbul', airline: 'Turkish Airlines', cost: 750, airport: 'IST', time: 10.5, lang: 'tr-TR', welcomeMessage: 'İstanbul\'a hoşgeldiniz!', nativePhrase: 'Çok güzel!', fact: 'Did you know? Istanbul is the only city that straddles two continents, Europe and Asia.', fact2: 'Local Tip: For a true taste of the city, try a "simit" (a circular bread with sesame seeds) from a street vendor.', visa: '🇹🇷', fontFamily: "'Meie Script', cursive", flagColors: ['#E30A17', '#FFFFFF'], emojis: ['🇹🇷', '🕌', '🧿', '☕️', '🥙', '🐈', '⛵', '📿'], cityImage: 'https://images.unsplash.com/photo-1636537511494-c3e558e0702b?auto=format&fit=crop&w=1932&q=80', airportImage: 'https://images.unsplash.com/photo-1576530519306-68a3b392f46f?auto=format&fit=crop&w=1950&q=80', restaurantImage: 'https://i.ibb.co/VYYjjP8g/istanbulcafe.jpg', souvenirs: [{ name: 'Turkish Delight', emoji: '🍬', cost: 25 }, { name: 'Evil Eye Charm', emoji: '🧿', cost: 40 }], recipe: { name: 'Kebab Recipe', emoji: '🥙', cost: 400 } },
+        { city: 'Istanbul', airline: 'Turkish Airlines', cost: 750, airport: 'IST', time: 10.5, lang: 'tr-TR', welcomeMessage: 'İstanbul\'a hoşgeldiniz!', nativePhrase: 'Çok güzel!', fact: 'Did you know? Istanbul is the only city that straddles two continents, Europe and Asia.', fact2: 'Local Tip: For a true taste of the city, try a "simit" (a circular bread with sesame seeds) from a street vendor.', visa: '🇹🇷', fontFamily: "'Meie Script', cursive", flagColors: ['#E30A17', '#FFFFFF'], emojis: ['🇹🇷', '🕌', '🧿', '☕️', '🥙', '🐈', '⛵', '📿'], cityImage: 'https://images.unsplash.com/photo-1636537511494-c3e558e0702b?auto=format&fit=crop&w=1932&q=80', airportImage: 'https://i.ibb.co/HL7Vz4Fz/istanbu-lairport.jpg', restaurantImage: 'https://i.ibb.co/VYYjjP8g/istanbulcafe.jpg', souvenirs: [{ name: 'Turkish Delight', emoji: '🍬', cost: 25 }, { name: 'Evil Eye Charm', emoji: '🧿', cost: 40 }], recipe: { name: 'Kebab Recipe', emoji: '🥙', cost: 400 } },
         { city: 'Paris', airline: 'Air France', cost: 650, airport: 'CDG', time: 7.5, lang: 'fr-FR', welcomeMessage: 'Bienvenue à Paris!', nativePhrase: 'Oh là là!', fact: 'Did you know? The Eiffel Tower can be 15 cm taller during the summer due to thermal expansion of the iron.', fact2: 'Local Tip: Skip the tourist traps! Find a local "boulangerie" for a fresh sandwich. It\'s cheaper and more authentic.', visa: '🇫🇷', fontFamily: "'Parisienne', cursive", flagColors: ['#0055A4', '#FFFFFF', '#EF4135'], emojis: ['🇫🇷', '🥐', '🍷', '🎨', '🗼', '🧀', '🧑‍🎨', '👗', '🥖'], cityImage: 'https://images.unsplash.com/photo-1499621574732-72324384dfbc?auto=format&fit=crop&w=1974&q=80', airportImage: 'https://images.unsplash.com/photo-1672310708154-771583101dbb?auto=format&fit=crop&w=1974&q=80', restaurantImage: 'https://images.pexels.com/photos/941861/pexels-photo-941861.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', souvenirs: [{ name: 'Mini Eiffel Tower', emoji: '🗼', cost: 50 }, { name: 'Beret', emoji: '👒', cost: 75 }], recipe: { name: 'Croissant Recipe', emoji: '🥐', cost: 350 } },
-        { city: 'Kyoto', airline: 'Japan Airlines', cost: 1350, airport: 'KIX', time: 14.0, lang: 'ja-JP', welcomeMessage: '京都へようこそ！', nativePhrase: 'Subarashii.', fact: 'Did you know? Kyoto has over 1,600 Buddhist temples and 400 Shinto shrines.', fact2: 'Local Tip: When visiting Gion, you might spot a real Geiko (Geisha). Remember to be respectful and not block their path.', visa: '🇯🇵', fontFamily: "'Yuji Syuku', serif", flagColors: ['#FFFFFF', '#BC002D'], emojis: ['🇯🇵', '🌸', '🏯', '🍣', '🍵', '🎋', '⛩️', '👘', '🦊'], cityImage: 'https://images.pexels.com/photos/3408353/pexels-photo-3408353.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', airportImage: 'https://images.unsplash.com/photo-1579027889354-95a28102a033?auto=format&fit=crop&w=1932&q=80', restaurantImage: 'https://images.pexels.com/photos/2290075/pexels-photo-2290075.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', souvenirs: [{ name: 'Folding Fan', emoji: '🪭', cost: 60 }, { name: 'Omamori Charm', emoji: '🧧', cost: 45 }], recipe: { name: 'Sushi Recipe', emoji: '🍣', cost: 700 } },
-        { city: 'Sydney', airline: 'Qantas', cost: 1550, airport: 'SYD', time: 22.0, lang: 'en-AU', welcomeMessage: 'G\'day mate, welcome to Sydney!', nativePhrase: 'No worries, mate.', fact: 'Did you know? The Sydney Opera House design was inspired by the peeling of an orange.', fact2: 'Local Tip: Take the ferry from Circular Quay to Manly for stunning harbor views that rival any expensive tour.', visa: '🇦🇺', fontFamily: "'Poppins', sans-serif", flagColors: ['#00008B', '#FFFFFF', '#FF0000'], emojis: ['🇦🇺', '🐨', '🦘', '🏄‍♂️', '🌉', '☀️', '🚤', '🍖', '🏖️'], cityImage: 'https://images.unsplash.com/photo-1524293581273-7926b78a82ce?auto=format&fit=crop&w=2070&q=80', airportImage: 'https://i.ibb.co/FbcDdpWn/IMG-20251112-WA0008.jpg', restaurantImage: 'https://i.ibb.co/gZY1Tm6R/IMG-20251112-WA0007.jpg', souvenirs: [{ name: 'Boomerang', emoji: '🪃', cost: 55 }, { name: 'Koala Plushie', emoji: '🐨', cost: 80 }], recipe: { name: 'Meat Pie Recipe', emoji: '🥧', cost: 800 } },
-        { city: 'Barcelona', airline: 'Iberia', cost: 700, airport: 'BCN', time: 8.0, lang: 'es-ES', welcomeMessage: '¡Bienvenido a Barcelona!', nativePhrase: '¡Qué guay!', fact: 'Did you know? Barcelona\'s famous Sagrada Família has been under construction for over 140 years.', fact2: 'Local Tip: Enjoy "tapas" like a local by bar-hopping in the El Born or Gràcia neighborhoods, not on La Rambla.', visa: '🇪🇸', fontFamily: "'Lobster', cursive", flagColors: ['#AA151B', '#F1BF00'], emojis: ['🇪🇸', '💃', '⚽️', '🥘', '🦎', '🏛️', '🍤', '🎶', ' Gaudí '], cityImage: 'https://images.unsplash.com/photo-1587789202069-f5729a835339?auto=format&fit=crop&w=2070&q=80', airportImage: 'https://i.ibb.co/356j3tp0/barcelonaairport.jpg', restaurantImage: 'https://i.ibb.co/pBBq1vK4/barcelonarestaurnat.jpg', souvenirs: [{ name: 'Mosaic Lizard', emoji: '🦎', cost: 65 }, { name: 'Paella Pan', emoji: '🥘', cost: 90 }], recipe: { name: 'Paella Recipe', emoji: '🥘', cost: 450 } },
-        { city: 'London', airline: 'British Airways', cost: 680, airport: 'LHR', time: 7.0, lang: 'en-GB', welcomeMessage: 'Welcome to London, cheers!', nativePhrase: 'Lovely jubbly!', fact: 'Did you know? The London Underground is the oldest underground railway network in the world, known as "the Tube".', fact2: 'Local Tip: Many of London\'s best museums, like the British Museum and the National Gallery, are completely free to enter!', visa: '🇬🇧', fontFamily: "'Playfair Display', serif", flagColors: ['#012169', '#FFFFFF', '#C8102E'], emojis: ['🇬🇧', '👑', '💂‍♂️', '☕️', '🚌', '🏛️', '☔', '🎭', '☎️'], cityImage: 'https://images.unsplash.com/photo-1520986606214-8b456906c813?auto=format&fit=crop&w=1974&q=80', airportImage: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/LHR_Terminal_5_departures.jpg', restaurantImage: 'https://images.unsplash.com/photo-1600375685293-84736939965d?auto=format&fit=crop&w=1974&q=80', souvenirs: [{ name: 'Double Decker Bus', emoji: '🚌', cost: 60 }, { name: 'Royal Guard Hat', emoji: '💂‍♂️', cost: 90 }], recipe: { name: 'Fish & Chips Recipe', emoji: '🐟', cost: 380 } },
+        { city: 'Kyoto', airline: 'Japan Airlines', cost: 1350, airport: 'KIX', time: 14.0, lang: 'ja-JP', welcomeMessage: '京都へようこそ！', nativePhrase: 'Subarashii.', fact: 'Did you know? Kyoto has over 1,600 Buddhist temples and 400 Shinto shrines.', fact2: 'Local Tip: When visiting Gion, you might spot a real Geiko (Geisha). Remember to be respectful and not block their path.', visa: '🇯🇵', fontFamily: "'Yuji Syuku', serif", flagColors: ['#FFFFFF', '#BC002D'], emojis: ['🇯🇵', '🌸', '🏯', '🍣', '🍵', '🎋', '⛩️', '👘', '🦊'], cityImage: 'https://images.pexels.com/photos/3408353/pexels-photo-3408353.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', airportImage: 'https://i.ibb.co/r1yvJvz/kyoto-airport.webp', restaurantImage: 'https://i.ibb.co/zWnmTCFC/kyoto-resturant.jpg', souvenirs: [{ name: 'Folding Fan', emoji: '🪭', cost: 60 }, { name: 'Omamori Charm', emoji: '🧧', cost: 45 }], recipe: { name: 'Sushi Recipe', emoji: '🍣', cost: 700 } },
+        { city: 'Sydney', airline: 'Qantas', cost: 1550, airport: 'SYD', time: 22.0, lang: 'en-AU', welcomeMessage: 'G\'day mate, welcome to Sydney!', nativePhrase: 'No worries, mate.', fact: 'Did you know? The Sydney Opera House design was inspired by the peeling of an orange.', fact2: 'Local Tip: Take the ferry from Circular Quay to Manly for stunning harbor views that rival any expensive tour.', visa: '🇦🇺', fontFamily: "'Poppins', sans-serif", flagColors: ['#00008B', '#FFFFFF', '#FF0000'], emojis: ['🇦🇺', '🐨', '🦘', '🏄‍♂️', '🌉', '☀️', '🚤', '🍖', '🏖️'], cityImage: 'https://i.ibb.co/kVd0ZSQD/sydney-view.jpg', airportImage: 'https://i.ibb.co/dJLYQTFX/sydney-airport.webp', restaurantImage: 'https://i.ibb.co/NnrW4gvb/sydney-resturant.jpg', souvenirs: [{ name: 'Boomerang', emoji: '🪃', cost: 55 }, { name: 'Koala Plushie', emoji: '🐨', cost: 80 }], recipe: { name: 'Meat Pie Recipe', emoji: '🥧', cost: 800 } },
+        { city: 'Barcelona', airline: 'Iberia', cost: 700, airport: 'BCN', time: 8.0, lang: 'es-ES', welcomeMessage: '¡Bienvenido a Barcelona!', nativePhrase: '¡Qué guay!', fact: 'Did you know? Barcelona\'s famous Sagrada Família has been under construction for over 140 years.', fact2: 'Local Tip: Enjoy "tapas" like a local by bar-hopping in the El Born or Gràcia neighborhoods, not on La Rambla.', visa: '🇪🇸', fontFamily: "'Lobster', cursive", flagColors: ['#AA151B', '#F1BF00'], emojis: ['🇪🇸', '💃', '⚽️', '🥘', '🦎', '🏛️', '🍤', '🎶', ' Gaudí '], cityImage: 'https://i.ibb.co/6R7LVS9r/barcelona-view.jpg', airportImage: 'https://i.ibb.co/356j3tp0/barcelonaairport.jpg', restaurantImage: 'https://i.ibb.co/pBBq1vK4/barcelonarestaurnat.jpg', souvenirs: [{ name: 'Mosaic Lizard', emoji: '🦎', cost: 65 }, { name: 'Paella Pan', emoji: '🥘', cost: 90 }], recipe: { name: 'Paella Recipe', emoji: '🥘', cost: 450 } },
+        { city: 'London', airline: 'British Airways', cost: 680, airport: 'LHR', time: 7.0, lang: 'en-GB', welcomeMessage: 'Welcome to London, cheers!', nativePhrase: 'Lovely jubbly!', fact: 'Did you know? The London Underground is the oldest underground railway network in the world, known as "the Tube".', fact2: 'Local Tip: Many of London\'s best museums, like the British Museum and the National Gallery, are completely free to enter!', visa: '🇬🇧', fontFamily: "'Playfair Display', serif", flagColors: ['#012169', '#FFFFFF', '#C8102E'], emojis: ['🇬🇧', '👑', '💂‍♂️', '☕️', '🚌', '🏛️', '☔', '🎭', '☎️'], cityImage: 'https://i.ibb.co/7tYdKH3q/london-view.jpg', airportImage: 'https://i.ibb.co/RGV7cyH4/213.jpg', restaurantImage: 'https://i.ibb.co/S73wF2Yn/london-esturant.jpg', souvenirs: [{ name: 'Double Decker Bus', emoji: '🚌', cost: 60 }, { name: 'Royal Guard Hat', emoji: '💂‍♂️', cost: 90 }], recipe: { name: 'Fish & Chips Recipe', emoji: '🐟', cost: 380 } },
         { city: 'New York', airline: 'Delta Airlines', cost: 250, airport: 'JFK', time: 1.8, lang: 'en-US', welcomeMessage: 'Welcome to the Big Apple!', nativePhrase: "How you doin'?", fact: 'Did you know? The first pizzeria in the United States was opened in New York City in 1905.', fact2: 'Local Tip: Walk across the Brooklyn Bridge from Brooklyn towards Manhattan for an unforgettable skyline view.', visa: '🇺🇸', fontFamily: "'Oswald', sans-serif", flagColors: ['#B22234', '#FFFFFF', '#3C3B6E'], emojis: ['🇺🇸', '🗽', '🚕', '🍎', '🏙️', '🍕', '🥨', '🎭', '🎷'], cityImage: 'https://images.unsplash.com/photo-1546436836-07a91091f160?auto=format&fit=crop&w=2074&q=80', airportImage: 'https://i.ibb.co/KjTM5CmD/IMG-20251112-WA0009.jpg', restaurantImage: 'https://i.ibb.co/6cx5HxXn/IMG-20251112-WA0010.jpg', souvenirs: [{ name: 'I ❤️ NY Shirt', emoji: '👕', cost: 40 }, { name: 'Statue of Liberty', emoji: '🗽', cost: 80 }], recipe: { name: 'Pizza Recipe', emoji: '🍕', cost: 250 } },
-        { city: 'Bangkok', airline: 'Thai Airways', cost: 1100, airport: 'BKK', time: 21.0, lang: 'th-TH', welcomeMessage: 'ยินดีต้อนรับสู่กรุงเทพ!', nativePhrase: 'Sawasdee krap.', fact: 'Did you know? Bangkok\'s full ceremonial name is one of the longest city names in the world.', fact2: 'Local Tip: A ride on a Chao Phraya Express Boat is a cheap and scenic way to see the city and avoid the traffic.', visa: '🇹🇭', fontFamily: "'Sriracha', cursive", flagColors: ['#A51931', '#FFFFFF', '#2E428B'], emojis: ['🇹🇭', '🐘', '🥭', '🛶', '🙏', '🛺', '🌶️', 'ക്ഷേത്ര', '🍜'], cityImage: 'https://images.unsplash.com/photo-1539093382943-2c1b9ea9901e?auto=format&fit=crop&w=1974&q=80', airportImage: 'https://i.ibb.co/8DM8g3CP/IMG-20251112-WA0006.jpg', restaurantImage: 'https://i.ibb.co/397cnnCz/IMG-20251112-WA0005.jpg', souvenirs: [{ name: 'Tuk-Tuk Model', emoji: '🛺', cost: 50 }, { name: 'Elephant Pants', emoji: '🐘', cost: 65 }], recipe: { name: 'Curry Recipe', emoji: '🍛', cost: 600 } },
-        { city: 'Cape Town', airline: 'South African Airways', cost: 1300, airport: 'CPT', time: 22.5, lang: 'en-ZA', welcomeMessage: 'Welcome to Cape Town!', nativePhrase: 'Howzit!', fact: 'Did you know? Cape Town is home to the incredibly rich Cape Floral Kingdom, a World Heritage site.', fact2: 'Local Tip: For the best sunset, skip the crowds on Table Mountain and hike to the top of Lion\'s Head or Signal Hill.', visa: '🇿🇦', fontFamily: "'Ubuntu', sans-serif", flagColors: ['#007A4D', '#FFB612', '#000000'], emojis: ['🇿🇦', '🐧', '🦁', '🍇', '⛰️', '🌺', '🐋', '🎨', '🥁'], cityImage: 'https://images.pexels.com/photos/259447/pexels-photo-259447.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', airportImage: 'https://i.ibb.co/nqLMjLbV/IMG-20251112-WA0002.jpg', restaurantImage: 'https://i.ibb.co/G4Kh2G16/IMG-20251112-WA0003.jpg', souvenirs: [{ name: 'Vuvuzela', emoji: '🎺', cost: 35 }, { name: 'Beaded Animal', emoji: '🦒', cost: 70 }], recipe: { name: 'Biltong Recipe', emoji: '🥩', cost: 680 } },
-        { city: 'Budapest', airline: 'Lufthansa', cost: 850, airport: 'BUD', time: 10.5, lang: 'hu-HU', welcomeMessage: 'Üdvözöljük Budapesten!', nativePhrase: 'Egészségedre!', fact: 'Did you know? Budapest is known as the "City of Spas" with over 120 thermal springs.', fact2: 'Local Tip: Don\'t miss the unique atmosphere of the "ruin bars" in the old Jewish Quarter, built in abandoned buildings.', visa: '🇭🇺', fontFamily: "'Cinzel', serif", flagColors: ['#CD2A3E', '#FFFFFF', '#436F4D'], emojis: ['🇭🇺', '🏰', '🌶️', '♨️', '🎻', '🌉', '🥘', '🍷', '큐브'], cityImage: 'https://images.pexels.com/photos/4674317/pexels-photo-4674317.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', airportImage: 'https://images.unsplash.com/photo-1601842971550-b74a3f379637?auto=format&fit=crop&w=2070&q=80', restaurantImage: 'https://images.pexels.com/photos/1267697/pexels-photo-1267697.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', souvenirs: [{ name: 'Paprika Spice', emoji: '🌶️', cost: 30 }, { name: 'Rubik\'s Cube', emoji: '🧊', cost: 50 }], recipe: { name: 'Goulash Recipe', emoji: '🍲', cost: 500 } },
-        { city: 'Cairo', airline: 'EgyptAir', cost: 950, airport: 'CAI', time: 11.5, lang: 'ar-EG', welcomeMessage: 'أهلاً بك في القاهرة!', nativePhrase: 'Yalla bina!', fact: 'Did you know? Cairo is home to the Great Pyramids of Giza, the only one of the Seven Wonders of the Ancient World still standing.', fact2: 'Local Tip: When shopping in the Khan el-Khalili bazaar, friendly bargaining is expected and part of the fun!', visa: '🇪🇬', fontFamily: "'Almendra', serif", flagColors: ['#CE1126', '#FFFFFF', '#000000'], emojis: ['🇪🇬', '🐪', '📜', '🏺', '🏜️', '🔺', '🐱', '⛵', '🪶'], cityImage: 'https://images.pexels.com/photos/261395/pexels-photo-261395.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', airportImage: 'https://images.unsplash.com/photo-16781222431522-834f8a855173?auto=format&fit=crop&w=2070&q=80', restaurantImage: 'https://images.pexels.com/photos/1058272/pexels-photo-1058272.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', souvenirs: [{ name: 'Pyramid Statue', emoji: '🔺', cost: 85 }, { name: 'Papyrus Scroll', emoji: '📜', cost: 60 }], recipe: { name: 'Falafel Recipe', emoji: '🧆', cost: 550 } },
-        { city: 'Jeddah', airline: 'Saudia', cost: 1250, airport: 'JED', time: 14.5, lang: 'ar-SA', welcomeMessage: 'أهلاً بك في جدة!', nativePhrase: "Masha'Allah.", fact: 'Did you know? Jeddah is known as the "Gateway to the Two Holy Mosques" for its proximity to Mecca and Medina.', fact2: 'Local Tip: Stroll along the Corniche at sunset to see the spectacular King Fahd\'s Fountain, one of the tallest in the world.', visa: '🇸🇦', fontFamily: "'Amiri', serif", flagColors: ['#006C35', '#FFFFFF'], emojis: ['🇸🇦', '🌴', '🌊', '🕌', '☕', '🏜️', ' DATES ', '🕋'], cityImage: 'https://images.unsplash.com/photo-1614559892277-2c5055b550a2?auto=format&fit=crop&w=1932&q=80', airportImage: 'https://i.ibb.co/0P67q79/IMG-20251112-WA0001.jpg', restaurantImage: 'https://images.unsplash.com/photo-1633215091873-a64016a505b8?auto=format&fit=crop&w=1964&q=80', souvenirs: [{ name: 'Prayer Beads', emoji: '📿', cost: 40 }, { name: 'Dates', emoji: '🌴', cost: 30 }], recipe: { name: 'Kabsa Recipe', emoji: '🍛', cost: 650 } },
+        { city: 'Bangkok', airline: 'Thai Airways', cost: 1100, airport: 'BKK', time: 21.0, lang: 'th-TH', welcomeMessage: 'ยินดีต้อนรับสู่กรุงเทพ!', nativePhrase: 'Sawasdee krap.', fact: 'Did you know? Bangkok\'s full ceremonial name is one of the longest city names in the world.', fact2: 'Local Tip: A ride on a Chao Phraya Express Boat is a cheap and scenic way to see the city and avoid the traffic.', visa: '🇹🇭', fontFamily: "'Sriracha', cursive", flagColors: ['#A51931', '#FFFFFF', '#2E428B'], emojis: ['🇹🇭', '🐘', '🥭', '🛶', '🙏', '🛺', '🌶️', 'ക്ഷേത്ര', '🍜'], cityImage: 'https://i.ibb.co/GfKqhFJn/bangkok-view.jpg', airportImage: 'https://i.ibb.co/8DM8g3CP/IMG-20251112-WA0006.jpg', restaurantImage: 'https://i.ibb.co/397cnnCz/IMG-20251112-WA0005.jpg', souvenirs: [{ name: 'Tuk-Tuk Model', emoji: '🛺', cost: 50 }, { name: 'Elephant Pants', emoji: '🐘', cost: 65 }], recipe: { name: 'Curry Recipe', emoji: '🍛', cost: 600 } },
+        { city: 'Cape Town', airline: 'South African Airways', cost: 1300, airport: 'CPT', time: 22.5, lang: 'en-ZA', welcomeMessage: 'Welcome to Cape Town!', nativePhrase: 'Howzit!', fact: 'Did you know? Cape Town is home to the incredibly rich Cape Floral Kingdom, a World Heritage site.', fact2: 'Local Tip: For the best sunset, skip the crowds on Table Mountain and hike to the top of Lion\'s Head or Signal Hill.', visa: '🇿🇦', fontFamily: "'Ubuntu', sans-serif", flagColors: ['#007A4D', '#FFB612', '#000000'], emojis: ['🇿🇦', '🐧', '🦁', '🍇', '⛰️', '🌺', '🐋', '🎨', '🥁'], cityImage: 'https://images.pexels.com/photos/259447/pexels-photo-259447.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', airportImage: 'https://i.ibb.co/3y5M0c9q/Whats-App-Image-2025-11-12-at-11-03-36-AM.jpg', restaurantImage: 'https://i.ibb.co/BHDGY6Ps/Whats-App-Image-2025-11-12-at-11-03-36-AM-2.jpg', souvenirs: [{ name: 'Vuvuzela', emoji: '🎺', cost: 35 }, { name: 'Beaded Animal', emoji: '🦒', cost: 70 }], recipe: { name: 'Biltong Recipe', emoji: '🥩', cost: 680 } },
+        { city: 'Budapest', airline: 'Lufthansa', cost: 850, airport: 'BUD', time: 10.5, lang: 'hu-HU', welcomeMessage: 'Üdvözöljük Budapesten!', nativePhrase: 'Egészségedre!', fact: 'Did you know? Budapest is known as the "City of Spas" with over 120 thermal springs.', fact2: 'Local Tip: Don\'t miss the unique atmosphere of the "ruin bars" in the old Jewish Quarter, built in abandoned buildings.', visa: '🇭🇺', fontFamily: "'Cinzel', serif", flagColors: ['#CD2A3E', '#FFFFFF', '#436F4D'], emojis: ['🇭🇺', '🏰', '🌶️', '♨️', '🎻', '🌉', '🥘', '🍷', '큐브'], cityImage: 'https://i.ibb.co/FNgHB1R/budapest-view.jpg', airportImage: 'https://i.ibb.co/VYz2Lh21/budapest-airport.jpg', restaurantImage: 'https://i.ibb.co/5hrFPW52/buapest-resturant.jpg', souvenirs: [{ name: 'Paprika Spice', emoji: '🌶️', cost: 30 }, { name: 'Rubik\'s Cube', emoji: '🧊', cost: 50 }], recipe: { name: 'Goulash Recipe', emoji: '🍲', cost: 500 } },
+        { city: 'Cairo', airline: 'EgyptAir', cost: 950, airport: 'CAI', time: 11.5, lang: 'ar-EG', welcomeMessage: 'أهلاً بك في القاهرة!', nativePhrase: 'Yalla bina!', fact: 'Did you know? Cairo is home to the Great Pyramids of Giza, the only one of the Seven Wonders of the Ancient World still standing.', fact2: 'Local Tip: When shopping in the Khan el-Khalili bazaar, friendly bargaining is expected and part of the fun!', visa: '🇪🇬', fontFamily: "'Almendra', serif", flagColors: ['#CE1126', '#FFFFFF', '#000000'], emojis: ['🇪🇬', '🐪', '📜', '🏺', '🏜️', '🔺', '🐱', '⛵', '🪶'], cityImage: 'https://images.pexels.com/photos/261395/pexels-photo-261395.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', airportImage: 'https://i.ibb.co/MyD3QvYf/cairo-airport.webp', restaurantImage: 'https://i.ibb.co/wNxDxCCt/cairo-resturant.jpg', souvenirs: [{ name: 'Pyramid Statue', emoji: '🔺', cost: 85 }, { name: 'Papyrus Scroll', emoji: '📜', cost: 60 }], recipe: { name: 'Falafel Recipe', emoji: '🧆', cost: 550 } },
+        { city: 'Jeddah', airline: 'Saudia', cost: 1250, airport: 'JED', time: 14.5, lang: 'ar-SA', welcomeMessage: 'أهلاً بك في جدة!', nativePhrase: "Masha'Allah.", fact: 'Did you know? Jeddah is known as the "Gateway to the Two Holy Mosques" for its proximity to Mecca and Medina.', fact2: 'Local Tip: Stroll along the Corniche at sunset to see the spectacular King Fahd\'s Fountain, one of the tallest in the world.', visa: '🇸🇦', fontFamily: "'Amiri', serif", flagColors: ['#006C35', '#FFFFFF'], emojis: ['🇸🇦', '🌴', '🌊', '🕌', '☕', '🏜️', ' DATES ', '🕋'], cityImage: 'https://i.ibb.co/Kzp5ZpGq/jeddah-view.jpg', airportImage: 'https://i.ibb.co/nNGSStYR/Whats-App-Image-2025-11-12-at-11-09-24-AM.jpg', restaurantImage: 'https://i.ibb.co/0P67q79/IMG-20251112-WA0001.jpg', souvenirs: [{ name: 'Prayer Beads', emoji: '📿', cost: 40 }, { name: 'Dates', emoji: '🌴', cost: 30 }], recipe: { name: 'Kabsa Recipe', emoji: '🍛', cost: 650 } },
         { city: 'Karachi', airline: 'PIA', cost: 1150, airport: 'KHI', time: 16.0, lang: 'ur-PK', welcomeMessage: 'کراچی میں خوش آمدید!', nativePhrase: 'Jee, bilkul.', fact: 'Did you know? Karachi is Pakistan\'s largest city and is known as the "City of Lights" for its vibrant nightlife.', fact2: 'Local Tip: Don\'t miss a chance to try a Bun Kebab, a classic Karachi street food, from a vendor at Burns Road Food Street.', visa: '🇵🇰', fontFamily: "'Noto Nastaliq Urdu', serif", flagColors: ['#006600', '#FFFFFF'], emojis: ['🇵🇰', '🕌', '🌊', '🐐', '🏏', '🛺', '☕', '⭐', '🌙'], cityImage: 'https://i.ibb.co/p6JnBPJd/4-W8o-Sd-QXQENtrmdc-Lu-Gu-w0q-Fh-Rc4-FBa-EG31-MKk-Eit0.webp', airportImage: 'https://i.ibb.co/tMWn5R3R/karachiairport.jpg', restaurantImage: 'https://i.ibb.co/8L0cS2YZ/karachirestaurant.jpg', souvenirs: [{ name: 'Ajrak Shawl', emoji: '🧣', cost: 75 }, { name: 'Truck Art Model', emoji: '🚚', cost: 95 }], recipe: { name: 'Biryani Recipe', emoji: '🍛', cost: 620 } }
     ];
 
@@ -317,7 +310,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 collectedSouvenirs: Array.from(collectedSouvenirs.entries()),
                 unlockedRecipes: Array.from(unlockedRecipes.entries()),
                 hasWorker,
-                workerLevel
+                workerLevel,
+                hasCollector, // Cafe automation
+                hasCook, // Cafe automation
             };
             localStorage.setItem('travelGameState', JSON.stringify(state));
         } catch (error) {
@@ -340,6 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 unlockedRecipes = new Map(state.unlockedRecipes ?? []);
                 hasWorker = state.hasWorker ?? false;
                 workerLevel = state.workerLevel ?? 0;
+                hasCollector = state.hasCollector ?? false;
+                hasCook = state.hasCook ?? false;
 
                 // Apply loaded state to UI
                 scoreEl.textContent = `$${score}`;
@@ -387,256 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- Multiplayer & Networking ---
-    function getCurrentZone(): string {
-        return currentLocation === 'Toronto' ? 'arrival' : currentLocation;
-    }
-
-    function normaliseCity(city?: string, zone?: string): string {
-        if (typeof city === 'string' && city.trim()) {
-            return city.trim().slice(0, 64);
-        }
-        if (zone === 'arrival') {
-            return 'Toronto';
-        }
-        if (typeof zone === 'string' && zone.trim()) {
-            return zone.trim().slice(0, 64);
-        }
-        return 'Toronto';
-    }
-
-    function hashString(value: string): number {
-        let hash = 0;
-        for (let i = 0; i < value.length; i++) {
-            hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
-        }
-        return hash;
-    }
-
-    function colorForPlayer(id: string): string {
-        if (id === selfId) return 'yellow';
-        const hue = Math.abs(hashString(id)) % 360;
-        return `hsl(${hue}, 80%, 70%)`;
-    }
-
-    async function sendPostRequest(endpoint: string, body: object) {
-        try {
-            // NOTE: The server can access the player's IP address from the request object here.
-            await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-        } catch (error) {
-            console.error(`Failed to POST to ${endpoint}:`, error);
-        }
-    }
-    
-    function sendUpdateIfNeeded() {
-        const currentState = {
-            id: selfId,
-            name: playerName,
-            emoji: personEmoji.textContent,
-            x,
-            y,
-            zone: getCurrentZone(),
-            city: currentLocation,
-            direction: isFacingRight ? 'right' : 'left',
-        };
-
-        if (JSON.stringify(currentState) !== JSON.stringify(lastPlayerState)) {
-            lastPlayerState = currentState;
-            sendPostRequest('/update', currentState);
-        }
-    }
-    
-    async function pollForUpdates() {
-        try {
-            const response = await fetch('/state');
-            if (!response.ok) {
-                throw new Error(`Failed to fetch state: ${response.statusText}`);
-            }
-            const data = await response.json();
-
-            // Process players
-            const receivedPlayerIds = new Set();
-            if (Array.isArray(data.players)) {
-                onlineCountEl.textContent = `${data.players.length} players online`;
-                data.players.forEach((p: any) => {
-                    if (!p || typeof p.id !== 'string' || p.id === selfId) return;
-                    receivedPlayerIds.add(p.id);
-                    updateOtherPlayerFromState(p);
-                });
-            }
-
-            // Remove players who are no longer in the state
-            for (const id of otherPlayers.keys()) {
-                if (!receivedPlayerIds.has(id)) {
-                    removeOtherPlayer(id);
-                }
-            }
-
-            // Process chat
-            if (Array.isArray(data.chat)) {
-                const newMessages = data.chat.filter((c: any) => typeof c.timestamp === 'number' && c.timestamp > lastChatTimestamp);
-                newMessages.forEach((entry: any) => {
-                    lastChatTimestamp = Math.max(lastChatTimestamp, entry.timestamp);
-                    const senderId = typeof entry.playerId === 'string' ? entry.playerId : 'unknown';
-                    if (senderId === selfId) return;
-                    if (entry.city && entry.city !== currentLocation) return;
-                    if (typeof entry.message !== 'string' || !entry.message.trim()) return;
-                    const senderName = typeof entry.name === 'string' && entry.name.trim() ? entry.name : 'Traveler';
-                    addChatMessage(senderName, entry.message, colorForPlayer(senderId));
-                    showChatBubble(senderId, entry.message);
-                });
-            }
-
-        } catch (error) {
-            console.error('Failed to poll server state:', error);
-            onlineCountEl.textContent = 'Connection error';
-        }
-    }
-
-    function createOtherPlayerElement(state: { id: string; name?: string; emoji?: string; zone?: string; city?: string; x?: number; y?: number; direction?: string; }): OtherPlayer {
-        const container = document.createElement('div');
-        container.className = 'other-player';
-        container.innerHTML = `
-            <div class="other-player-emoji">${state.emoji ?? '🧍'}</div>
-            <div class="other-player-label">${state.name ?? 'Traveler'}</div>
-            <div class="chat-bubble hidden"></div>
-        `;
-
-        const emojiEl = container.querySelector('.other-player-emoji') as HTMLElement;
-        const labelEl = container.querySelector('.other-player-label') as HTMLElement;
-        const bubbleEl = container.querySelector('.chat-bubble') as HTMLElement;
-
-        const color = colorForPlayer(state.id);
-        labelEl.style.color = color;
-
-        const zone = typeof state.zone === 'string' ? state.zone : 'arrival';
-        const city = normaliseCity(state.city, zone);
-
-        const player: OtherPlayer = {
-            id: state.id,
-            name: state.name ?? 'Traveler',
-            emoji: state.emoji ?? '🧍',
-            x: state.x ?? x,
-            y: state.y ?? y,
-            targetX: state.x ?? x,
-            targetY: state.y ?? y,
-            zone,
-            city,
-            isFacingRight: state.direction === 'right',
-            element: container,
-            emojiElement: emojiEl,
-            labelElement: labelEl,
-            bubbleElement: bubbleEl,
-            color,
-        };
-
-        if (player.isFacingRight) {
-            emojiEl.style.transform = 'scaleX(-1)';
-        }
-
-        otherPlayersContainer.appendChild(container);
-        otherPlayers.set(player.id, player);
-        updateOtherPlayerVisibility(player);
-        return player;
-    }
-
-    function updateOtherPlayerVisibility(player: OtherPlayer) {
-        const shouldShow = player.zone === getCurrentZone() && player.city === currentLocation;
-        player.element.classList.toggle('hidden', !shouldShow);
-        if (!shouldShow) {
-            player.bubbleElement.classList.remove('visible');
-            player.bubbleElement.classList.add('hidden');
-        }
-    }
-
-    function removeOtherPlayer(id: string) {
-        const existing = otherPlayers.get(id);
-        if (!existing) return;
-        existing.element.remove();
-        otherPlayers.delete(id);
-    }
-
-    function showChatBubble(playerId: string, message: string) {
-        const player = otherPlayers.get(playerId);
-        if (!player || player.zone !== getCurrentZone() || player.city !== currentLocation) return;
-
-        player.bubbleElement.textContent = message;
-        player.bubbleElement.classList.remove('hidden');
-        player.bubbleElement.classList.add('visible');
-
-        setTimeout(() => {
-            player.bubbleElement.classList.remove('visible');
-        }, 4000);
-
-        setTimeout(() => {
-            player.bubbleElement.classList.add('hidden');
-        }, 4500);
-    }
-
-    function showSelfChatBubble(message: string) {
-        if (!selfChatBubble) return;
-
-        selfChatBubble.textContent = message;
-        selfChatBubble.classList.remove('hidden');
-        selfChatBubble.classList.add('visible');
-
-        setTimeout(() => {
-            selfChatBubble.classList.remove('visible');
-        }, 4000);
-
-        setTimeout(() => {
-            selfChatBubble.classList.add('hidden');
-        }, 4500);
-    }
-
-    function hideSelfChatBubble() {
-        if (!selfChatBubble) return;
-        selfChatBubble.classList.remove('visible');
-        selfChatBubble.classList.add('hidden');
-    }
-
-    function updateOtherPlayerFromState(state: { id: string; name?: string; emoji?: string; x?: number; y?: number; zone?: string; city?: string; direction?: string; }) {
-        if (!state.id || state.id === selfId) return;
-
-        let existing = otherPlayers.get(state.id);
-        if (!existing) {
-            existing = createOtherPlayerElement(state);
-        }
-
-        if(state.name && state.name !== existing.name) {
-            existing.name = state.name;
-            existing.labelElement.textContent = existing.name;
-        }
-
-        if (state.emoji && state.emoji !== existing.emoji) {
-            existing.emoji = state.emoji;
-            existing.emojiElement.textContent = existing.emoji;
-        }
-
-        if (typeof state.x === 'number') existing.targetX = state.x;
-        if (typeof state.y === 'number') existing.targetY = state.y;
-        
-        if (typeof state.zone === 'string' && state.zone !== existing.zone) {
-            existing.zone = state.zone;
-        }
-
-        existing.city = normaliseCity(state.city, existing.zone);
-        updateOtherPlayerVisibility(existing);
-
-        if (state.direction === 'right' && !existing.isFacingRight) {
-            existing.isFacingRight = true;
-            existing.emojiElement.style.transform = 'scaleX(-1)';
-        } else if (state.direction === 'left' && existing.isFacingRight) {
-            existing.isFacingRight = false;
-            existing.emojiElement.style.transform = 'scaleX(1)';
-        }
-    }
-
-
     // --- Utility Functions ---
     function speak(text: string, lang = 'en-US'): Promise<void> {
         return new Promise((resolve) => {
@@ -659,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function handleInsufficientFunds() {
         playSound('error');
-        await speak("Out of money! Go put some fries in the bag.");
+        await speak("Not enough money!");
     }
 
     function typeMessage(text: string, element: HTMLElement, typeDelay: number, displayDuration: number): Promise<void> {
@@ -763,6 +510,10 @@ document.addEventListener('DOMContentLoaded', () => {
         promoteWorkerBtn.disabled = score < promotionCost || !hasWorker;
         
         updateMinigameUnlockStatus();
+
+        // Cafe Upgrade Buttons
+        hireCollectorBtn.disabled = hasCollector || score < 500;
+        hireCookBtn.disabled = hasCook || score < 1500;
     }
 
     function updateScore(amount: number) {
@@ -782,97 +533,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    let lastFrameTime = performance.now();
     function gameLoop() {
-        // Main player movement
-        const dx = targetX - x;
-        const dy = targetY - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const now = performance.now();
+        const deltaTime = Math.min(0.1, (now - lastFrameTime) / 1000); // Delta in seconds, clamped
+        lastFrameTime = now;
 
-        if (distance > 1) {
-            x += dx * 0.08;
-            y += dy * 0.08;
-            
-            if (dx > 1 && !isFacingRight) {
-                isFacingRight = true;
-                personEmoji.style.transform = 'scaleX(-1)';
-            } else if (dx < -1 && isFacingRight) {
-                isFacingRight = false;
-                personEmoji.style.transform = 'scaleX(1)';
+        if (!cafeActive) {
+            // Main player movement
+            const dx = targetX - x;
+            const dy = targetY - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 1) {
+                const easing = 1 - Math.pow(0.85, deltaTime * 60); // Frame-rate independent easing
+                x += dx * easing;
+                y += dy * easing;
+                
+                if (dx > 1 && !isFacingRight) {
+                    isFacingRight = true;
+                    personEmoji.style.transform = 'scaleX(-1)';
+                } else if (dx < -1 && isFacingRight) {
+                    isFacingRight = false;
+                    personEmoji.style.transform = 'scaleX(1)';
+                }
+            } else if (currentMovePromise) {
+                currentMovePromise();
+                currentMovePromise = null;
             }
-            sendUpdateIfNeeded();
-        } else if (currentMovePromise) {
-            currentMovePromise();
-            currentMovePromise = null;
-            sendUpdateIfNeeded();
-        }
-        
-        personContainer.style.left = `${x}px`;
-        personContainer.style.top = `${y}px`;
-
-        // Other players movement (server-driven)
-        otherPlayers.forEach(player => {
-            const pdx = player.targetX - player.x;
-            const pdy = player.targetY - player.y;
-            const pDist = Math.sqrt(pdx*pdx + pdy*pdy);
             
-            if (pDist > 1) {
-                player.x += pdx * 0.08;
-                player.y += pdy * 0.08;
+            personContainer.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+
+            if (isLuggageFollowing) {
+                luggageContainer.style.transform = `translate(${x - 25}px, ${y + 10}px)`;
+                luggageContainer.style.zIndex = '4';
+            }
+        } else {
+             // Cafe player movement
+            const dx = cafePlayerTargetX - cafePlayerX;
+            const dy = cafePlayerTargetY - cafePlayerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 5) { // Increased threshold for snapping
+                const speed = 300 * deltaTime; // pixels per second
+                cafePlayerX += (dx / distance) * speed;
+                cafePlayerY += (dy / distance) * speed;
             } else {
-                player.x = player.targetX;
-                player.y = player.targetY;
+                cafePlayerX = cafePlayerTargetX;
+                cafePlayerY = cafePlayerTargetY;
+                if (currentCafeMovePromise) {
+                    currentCafeMovePromise();
+                    currentCafeMovePromise = null;
+                }
             }
-
-            player.element.style.left = `${player.x}px`;
-            player.element.style.top = `${player.y}px`;
-        });
-
-
-        if (isLuggageFollowing) {
-            luggageContainer.style.left = `${x - 25}px`;
-            luggageContainer.style.top = `${y + 10}px`;
-            luggageContainer.style.zIndex = '4';
+            cafePlayer.style.transform = `translate(${cafePlayerX}px, ${cafePlayerY}px) translate(-50%, -50%)`;
         }
 
         requestAnimationFrame(gameLoop);
     }
-
-    // --- Chat Logic ---
-    function addChatMessage(sender: string, message: string, color = 'white') {
-        const p = document.createElement('p');
-        p.innerHTML = `<strong style="color: ${color};">${sender}:</strong> ${message}`;
-        chatHistory.appendChild(p);
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-
-        if (chatToggleButton) {
-            if (chatContainer.classList.contains('collapsed') && sender !== playerName) {
-                chatToggleButton.classList.add('has-unread');
-                chatToggleButton.setAttribute('aria-label', `${chatToggleDefaultLabel} (new messages)`);
-            } else if (!chatContainer.classList.contains('collapsed')) {
-                chatToggleButton.classList.remove('has-unread');
-                chatToggleButton.setAttribute('aria-label', chatToggleDefaultLabel);
-            }
-        }
-    }
-    
-    async function handleSendMessage() {
-        const message = chatInput.value.trim();
-        if (message) {
-            addChatMessage(playerName, message, colorForPlayer(selfId));
-            showSelfChatBubble(message);
-            lastChatTimestamp = Date.now();
-            await sendPostRequest('/chat', {
-                id: selfId,
-                name: playerName,
-                message: message,
-                city: currentLocation,
-                zone: getCurrentZone(),
-                timestamp: lastChatTimestamp,
-            });
-            chatInput.value = '';
-        }
-    }
-
 
     // --- UI Logic ---
     function showCityView(flight: (typeof flightData)[0]) {
@@ -888,10 +606,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         currentLocation = flight.city;
         cityImage.src = flight.cityImage;
-        awayAirportPlaceholder.innerHTML = `✈️ Return to Toronto`;
-        awayAirportPlaceholder.style.backgroundImage = '';
-        awayAirportPlaceholder.style.backgroundSize = '';
-        awayAirportPlaceholder.style.backgroundPosition = '';
+
+        if (flight.airportImage) {
+            awayAirportPlaceholder.innerHTML = `<span class="return-home-text">Return to Toronto</span>`;
+            awayAirportPlaceholder.style.backgroundImage = `url('${flight.airportImage}')`;
+            awayAirportPlaceholder.classList.add('has-thumbnail');
+        } else {
+            awayAirportPlaceholder.innerHTML = `✈️ Return to Toronto`;
+            awayAirportPlaceholder.style.backgroundImage = '';
+            awayAirportPlaceholder.classList.remove('has-thumbnail');
+        }
         awayAirportPlaceholder.setAttribute('aria-label', 'Return to Toronto');
         awayAirportPlaceholder.setAttribute('title', 'Return to Toronto');
 
@@ -901,8 +625,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cityTitle.style.setProperty('--flag-gradient', gradient);
 
         cityEmojis.innerHTML = flight.emojis.map(e => `<span>${e}</span>`).join('');
-        otherPlayers.forEach(updateOtherPlayerVisibility);
-        hideSelfChatBubble();
         saveGameState();
     }
 
@@ -911,21 +633,21 @@ document.addEventListener('DOMContentLoaded', () => {
         restaurantContainer.classList.add('hidden');
         giftShopContainer.classList.add('hidden');
         awayAirportPlaceholder.classList.add('hidden');
+        awayAirportPlaceholder.classList.remove('has-thumbnail');
+        awayAirportPlaceholder.style.backgroundImage = '';
         cityTitle.classList.add('hidden');
         cityEmojis.style.display = 'none';
 
         passportOfficeContainer.classList.remove('hidden');
         airportContainer.classList.remove('hidden');
         mfGroupContainer.classList.remove('hidden');
+
         // Reset luggage position to its CSS default
-        luggageContainer.style.left = '';
-        luggageContainer.style.top = '';
+        luggageContainer.style.transform = '';
         luggageContainer.style.zIndex = '2';
 
         currentLocation = 'Toronto';
         captionContainer.innerHTML = '';
-        otherPlayers.forEach(updateOtherPlayerVisibility);
-        hideSelfChatBubble();
         saveGameState();
     }
 
@@ -933,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
         passportCelebration.classList.add('active');
         const containerRect = passportCelebration.getBoundingClientRect();
         
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 20; i++) {
             const sparkle = document.createElement('div');
             sparkle.className = 'sparkle';
             const angle = Math.random() * 2 * Math.PI;
@@ -958,7 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
         celebrationContainer.innerHTML = `<div class="celebration-text">${message}</div>`;
         celebrationContainer.classList.remove('hidden');
 
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 30; i++) {
             const firework = document.createElement('div');
             firework.className = 'firework';
             
@@ -1222,16 +944,15 @@ document.addEventListener('DOMContentLoaded', () => {
             food.style.touchAction = 'none';
 
             food.addEventListener('pointerdown', (event) => {
-                if (event.pointerType === 'touch' || event.pointerType === 'pen') {
-                    pointerStart = { x: event.clientX, y: event.clientY, time: Date.now() };
-                    draggedItem = food;
-                    food.classList.add('is-dragging');
-                    event.preventDefault();
-                }
+                // This logic works for mouse, touch, and pen, so we don't check pointerType.
+                pointerStart = { x: event.clientX, y: event.clientY, time: Date.now() };
+                draggedItem = food;
+                food.classList.add('is-dragging');
+                event.preventDefault(); // Prevents text selection on desktop
             });
 
             food.addEventListener('pointerup', (event) => {
-                if (!pointerStart || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+                if (!pointerStart) {
                     return;
                 }
 
@@ -1289,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             food.addEventListener('pointermove', (event) => {
-                if (!pointerStart || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+                if (!pointerStart) {
                     return;
                 }
 
@@ -1345,7 +1066,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startWorkerInterval() {
         if (workerIntervalId) clearInterval(workerIntervalId);
-        if (!hasWorker) return;
+        if (!hasWorker) {
+            workerAnimationContainer.classList.add('hidden');
+            return;
+        };
 
         const interval = 10000 / workerLevel;
         workerIntervalId = window.setInterval(() => {
@@ -1617,6 +1341,204 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.dialog-container').forEach(d => d.classList.add('hidden'));
     }
 
+    // --- Cafe Tycoon Logic ---
+    function moveEntityInCafe(targetElement: HTMLElement) {
+        return new Promise<void>(resolve => {
+            const rect = targetElement.getBoundingClientRect();
+            cafePlayerTargetX = rect.left + rect.width / 2;
+            cafePlayerTargetY = rect.top + rect.height / 2;
+            currentCafeMovePromise = resolve;
+        });
+    }
+
+    function spawnPotato() {
+        if (!cafeActive) return;
+        const pot = document.createElement('div');
+        pot.className = 'potato';
+        pot.textContent = '🥔';
+        pot.style.left = `${10 + Math.random() * 80}%`;
+        pot.style.top = `${40 + Math.random() * 50}%`;
+        cafeWorldContainer.appendChild(pot);
+        potatoes.push(pot);
+
+        pot.addEventListener('click', async () => {
+            if (isInteracting) return;
+            if (carryType !== 'none' && carryType !== 'potato') return;
+            if (carriedItems >= maxCarry) return;
+            
+            isInteracting = true;
+            await moveEntityInCafe(pot);
+
+            pot.remove();
+            potatoes = potatoes.filter(p => p !== pot);
+            carriedItems++;
+            carryType = 'potato';
+            updateCarryCounter();
+            playSound('click');
+            isInteracting = false;
+        });
+    }
+
+    function updateCarryCounter() {
+        carryCounter.textContent = `Carrying: ${carriedItems} ${carryType === 'potato' ? '🥔' : carryType === 'sliced' ? '🔪' : ''}`;
+    }
+
+    function resetCarry() {
+        carriedItems = 0;
+        carryType = 'none';
+        updateCarryCounter();
+    }
+
+    async function handleStationClick(e: MouseEvent) {
+        if (!cafeActive || isInteracting) return;
+        const station = (e.target as HTMLElement).closest('.station');
+        if (!station) return;
+        const type = station.getAttribute('data-type');
+        
+        isInteracting = true;
+        await moveEntityInCafe(station as HTMLElement);
+
+        if (type === 'slicer' && carryType === 'potato' && carriedItems > 0) {
+            carriedItems--;
+            if (carriedItems === 0) carryType = 'sliced';
+            updateCarryCounter();
+            playSound('click');
+            const icon = station.querySelector('.station-icon')!;
+            const originalIcon = icon.textContent;
+            icon.textContent = '✅';
+            setTimeout(() => icon.textContent = originalIcon, 800);
+        } else if (type === 'fryer' && carryType === 'sliced') {
+            const fries = document.createElement('div');
+            fries.className = 'serving-slot';
+            fries.textContent = '🍟';
+            servingSlots.appendChild(fries);
+            resetCarry();
+            updateScore(10);
+            playSound('earn');
+            showEarningToast(10);
+            setTimeout(() => {
+                if (fries.isConnected) fries.remove();
+            }, 3000);
+        }
+
+        isInteracting = false;
+    }
+
+    function enterCafeView() {
+        cafeActive = true;
+        worldMap.classList.add('hidden');
+        cafeWorldContainer.classList.remove('hidden');
+        personContainer.classList.add('hidden');
+        cafePlayer.textContent = personEmoji.textContent || '🧍';
+        
+        cafePlayerX = window.innerWidth / 2;
+        cafePlayerY = window.innerHeight * 0.8;
+        cafePlayerTargetX = cafePlayerX;
+        cafePlayerTargetY = cafePlayerY;
+
+        potatoSpawnTimer = window.setInterval(spawnPotato, POTATO_SPAWN_INTERVAL);
+        spawnPotato();
+
+        updateButtonStates();
+        // Start automation if unlocked
+        if (hasCollector) {
+            cafeWorkerCollector.classList.remove('hidden');
+            startCollectorAutomation();
+        }
+        if (hasCook) {
+            cafeWorkerCook.classList.remove('hidden');
+            startCookAutomation();
+        }
+    }
+
+    function exitCafeView() {
+        cafeActive = false;
+        worldMap.classList.remove('hidden');
+        cafeWorldContainer.classList.add('hidden');
+        personContainer.classList.remove('hidden');
+
+        if (potatoSpawnTimer) clearInterval(potatoSpawnTimer);
+        if (collectorIntervalId) clearInterval(collectorIntervalId);
+        if (cookIntervalId) clearInterval(cookIntervalId);
+
+        potatoes.forEach(p => p.remove());
+        potatoes = [];
+        resetCarry();
+        servingSlots.innerHTML = '';
+    }
+
+    function startCollectorAutomation() {
+        if(collectorIntervalId) clearInterval(collectorIntervalId);
+        collectorIntervalId = window.setInterval(async () => {
+            if (isCollectorBusy || potatoes.length === 0 || (carryType !== 'none' && carryType !== 'potato') || carriedItems >= maxCarry) return;
+
+            isCollectorBusy = true;
+            const targetPotato = potatoes[0];
+            
+            const collectorRect = cafeWorkerCollector.getBoundingClientRect();
+            const potatoRect = targetPotato.getBoundingClientRect();
+            
+            cafeWorkerCollector.style.transform = `translate(${potatoRect.left}px, ${potatoRect.top}px)`;
+            await new Promise(r => setTimeout(r, 1000));
+            
+            if(targetPotato.isConnected) {
+                targetPotato.remove();
+                potatoes.shift();
+                carriedItems++;
+                carryType = 'potato';
+                updateCarryCounter();
+            }
+
+            const binRect = stationPotatoBin.getBoundingClientRect();
+            cafeWorkerCollector.style.transform = `translate(${binRect.left}px, ${binRect.top}px)`;
+            await new Promise(r => setTimeout(r, 1000));
+
+            isCollectorBusy = false;
+        }, 5000);
+    }
+    
+    function startCookAutomation() {
+        if(cookIntervalId) clearInterval(cookIntervalId);
+        cookIntervalId = window.setInterval(async () => {
+             if (isCookBusy || carriedItems === 0) return;
+
+             isCookBusy = true;
+             
+             if(carryType === 'potato') {
+                const slicerRect = stationSlicer.getBoundingClientRect();
+                cafeWorkerCook.style.transform = `translate(${slicerRect.left}px, ${slicerRect.top}px)`;
+                await new Promise(r => setTimeout(r, 1000));
+
+                carriedItems--;
+                if(carriedItems === 0) carryType = 'sliced';
+                updateCarryCounter();
+             }
+             
+             if(carryType === 'sliced') {
+                const fryerRect = stationFryer.getBoundingClientRect();
+                cafeWorkerCook.style.transform = `translate(${fryerRect.left}px, ${fryerRect.top}px)`;
+                await new Promise(r => setTimeout(r, 1000));
+                
+                const fries = document.createElement('div');
+                fries.className = 'serving-slot';
+                fries.textContent = '🍟';
+                servingSlots.appendChild(fries);
+                resetCarry();
+                updateScore(10);
+                showEarningToast(10);
+                setTimeout(() => { if (fries.isConnected) fries.remove(); }, 3000);
+             }
+
+             const startRect = stationSlicer.getBoundingClientRect();
+             cafeWorkerCook.style.transform = `translate(${startRect.right + 20}px, ${startRect.top}px)`;
+             await new Promise(r => setTimeout(r, 1000));
+
+             isCookBusy = false;
+
+        }, 7000);
+    }
+
+
     // --- Event Listeners & Game Init ---
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -1627,10 +1549,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', async (e) => {
         const target = e.target as HTMLElement;
         
+        if (cafeActive) {
+            handleStationClick(e as MouseEvent);
+            return; // Don't process other clicks in cafe view
+        }
+        
         // Prevent player movement when interacting with UI
-        if (target.closest('.dialog-container, .action-button, [id$="-container"], .button-42, .button-5, .button-85, .button-14, #chat-container')) {
+        if (target.closest('.dialog-container, .action-button, [id$="-container"], .button-42, .button-5, .button-85, .button-14, #cafe-world-container')) {
              // Let other handlers below process the click
-        } else {
+        } else if (!cafeActive) { // Prevent movement when in cafe view
             targetX = e.clientX;
             targetY = e.clientY;
         }
@@ -1722,28 +1649,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return;
         }
-        if (target === workShiftBtn) { setupMinigame(); minigameDialog.classList.remove('hidden'); return; }
-        if (target === manageStaffBtn) { 
-            const promotionCost = 1000 * (workerLevel + 1);
-            if(hasWorker) {
-                staffStatus.textContent = `Your Chef is Level ${workerLevel}, earning every ${ (10000 / workerLevel / 1000).toFixed(1)}s.`;
-                promoteWorkerBtn.textContent = `Promote Chef ($${promotionCost})`;
-                hireWorkerBtn.classList.add('hidden');
-                promoteWorkerBtn.classList.remove('hidden');
-            } else {
-                staffStatus.textContent = "You have no employees.";
-                hireWorkerBtn.classList.remove('hidden');
-                promoteWorkerBtn.classList.add('hidden');
-            }
-            updateButtonStates();
-            staffDialog.classList.remove('hidden'); 
-            return; 
-        }
+
         if (target === memoryMatchBtn && !memoryMatchBtn.disabled) { setupMemoryGame(); memoryGameDialog.classList.remove('hidden'); return; }
         if (target === gemSwapBtn && !gemSwapBtn.disabled) { setupGemSwapGame(); gemSwapDialog.classList.remove('hidden'); return; }
 
         if (staffDialog.contains(target)) {
-             if(target === hireWorkerBtn) {
+             if(target === hireWorkerBtn && !hireWorkerBtn.disabled) {
                 if (score >= 1000) {
                     updateScore(-1000);
                     hasWorker = true;
@@ -1753,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     handleInsufficientFunds();
                 }
-             } else if (target === promoteWorkerBtn) {
+             } else if (target === promoteWorkerBtn && !promoteWorkerBtn.disabled) {
                 const cost = 1000 * (workerLevel + 1);
                 if(score >= cost) {
                     updateScore(-cost);
@@ -1787,7 +1698,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     passportDialog.classList.remove('hidden');
                 }
             } else if (interactionTarget.id === 'mf-group-container') {
-                restaurantDialog.classList.remove('hidden');
+                enterCafeView();
             } else if (interactionTarget.id === 'luggage-container') {
                 souvenirsContainer.classList.remove('hidden');
             } else if (interactionTarget.id === 'settings-container') {
@@ -1828,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </button>
                         `).join('');
                     }
-                     itemsHTML += `<button class="gift-item button-14 recipe-item" role="button" data-name="${flight.recipe.name}" data-type="recipe" id="recipe-btn-${flight.recipe.name.replace(/\s+/g, '-')}">
+                     itemsHTML += `<button class="gift-item button-14 recipe-item" role="button" data-name="${flight.recipe.name}" data-type="recipe" id="recipe-btn-${flight.recipe.name.replace(/\s+/g, '-')}}">
                         📖 ${flight.recipe.name}<br>
                         $${flight.recipe.cost}
                     </button>`;
@@ -1880,32 +1791,6 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsOkBtn.addEventListener('click', () => {
         settingsDialog.classList.add('hidden');
         saveGameState();
-        sendUpdateIfNeeded();
-    });
-
-    // Chat Listeners
-    chatContainer.setAttribute('aria-hidden', 'false');
-    if (chatToggleButton) {
-        chatToggleButton.classList.add('active');
-        chatToggleButton.addEventListener('click', () => {
-            const collapsed = chatContainer.classList.toggle('collapsed');
-            chatToggleButton.classList.toggle('active', !collapsed);
-            chatToggleButton.classList.remove('has-unread');
-            chatToggleButton.setAttribute('aria-expanded', (!collapsed).toString());
-            chatToggleButton.setAttribute('aria-label', chatToggleDefaultLabel);
-            chatContainer.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
-
-            if (!collapsed) {
-                setTimeout(() => chatInput.focus(), 120);
-            }
-        });
-    }
-
-    chatSendBtn.addEventListener('click', handleSendMessage);
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            handleSendMessage();
-        }
     });
 
     // Tooltip and Hover Sound Logic
@@ -1922,7 +1807,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const interactiveElement = target.closest('.action-button, .button-42, .button-5, .button-14, .button-85, #passport-office-container, #airport-container, #mf-group-container, #restaurant-container, #gift-shop-container, #luggage-container, #settings-container, #away-airport-placeholder, #chat-toggle-button');
+        const interactiveElement = target.closest('.action-button, .button-42, .button-5, .button-14, .button-85, #passport-office-container, #airport-container, #mf-group-container, #restaurant-container, #gift-shop-container, #luggage-container, #settings-container, #away-airport-placeholder');
         if (interactiveElement && !interactiveElement.hasAttribute('data-hover-sound-played')) {
             playSound('pop');
             interactiveElement.setAttribute('data-hover-sound-played', 'true');
@@ -1957,6 +1842,47 @@ document.addEventListener('DOMContentLoaded', () => {
             completeBagDrop(draggedItem);
         }
     });
+    
+    // Cafe Tycoon Listeners
+    returnToWorldBtn.addEventListener('click', () => {
+        exitCafeView();
+        const mfRect = mfGroupContainer.getBoundingClientRect();
+        targetX = mfRect.left + mfRect.width / 2;
+        targetY = mfRect.top + mfRect.height / 2;
+    });
+
+    cafeUpgradesBtn.addEventListener('click', () => {
+        updateButtonStates();
+        cafeUpgradesDialog.classList.remove('hidden');
+    });
+    
+    hireCollectorBtn.addEventListener('click', () => {
+        const cost = 500;
+        if (score >= cost && !hasCollector) {
+            updateScore(-cost);
+            hasCollector = true;
+            cafeWorkerCollector.classList.remove('hidden');
+            startCollectorAutomation();
+            cafeUpgradesDialog.classList.add('hidden');
+            saveGameState();
+        } else {
+            handleInsufficientFunds();
+        }
+    });
+    
+    hireCookBtn.addEventListener('click', () => {
+        const cost = 1500;
+        if (score >= cost && !hasCook) {
+            updateScore(-cost);
+            hasCook = true;
+            cafeWorkerCook.classList.remove('hidden');
+            startCookAutomation();
+            cafeUpgradesDialog.classList.add('hidden');
+            saveGameState();
+        } else {
+            handleInsufficientFunds();
+        }
+    });
 
 
     // --- Game initialization ---
@@ -1966,12 +1892,10 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound('welcome');
         updateMinigameUnlockStatus();
         
-        // Multiplayer polling and state saving intervals
-        setInterval(pollForUpdates, 3000);
+        // Save game state periodically
         setInterval(saveGameState, 60000); // Save every minute
         window.addEventListener('beforeunload', saveGameState);
 
-        pollForUpdates(); // Initial fetch
         gameLoop();
         
         // Hide loading screen
