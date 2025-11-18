@@ -88,15 +88,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const cafeBranchBanner = document.getElementById('cafe-branch-banner') as HTMLElement;
     const cafeBranchTitle = document.getElementById('cafe-branch-title') as HTMLElement;
     const cafeBranchMenu = document.getElementById('cafe-branch-menu') as HTMLElement;
-    const cafeQueue = document.getElementById('cafe-queue') as HTMLElement;
     const cafeDishStack = document.getElementById('cafe-dish-stack') as HTMLElement;
     const cafeCashStack = document.getElementById('cafe-cash-stack') as HTMLElement;
     const cafeCustomerTables = document.getElementById('cafe-customer-tables') as HTMLElement;
-    const cafeCityChip = document.getElementById('cafe-city-chip') as HTMLElement;
-    const cafeMoneyTotal = document.getElementById('cafe-money-total') as HTMLElement;
-    const cafeOrdersTotal = document.getElementById('cafe-orders-total') as HTMLElement;
-    const cafeReadyTotal = document.getElementById('cafe-ready-total') as HTMLElement;
+    const cafeCityName = document.getElementById('cafe-city-name') as HTMLElement;
+    const cafeMoneyValue = document.getElementById('cafe-money-value') as HTMLElement;
+    const cafeMainDishEmoji = document.getElementById('cafe-main-dish-emoji') as HTMLElement;
+    const cafeMainDishName = document.getElementById('cafe-main-dish-name') as HTMLElement;
+    const cafeAutomationPill = document.getElementById('cafe-automation-pill') as HTMLElement;
     const cafeOrdersList = document.getElementById('cafe-orders-list') as HTMLElement;
+    const cafeQueue = cafeOrdersList;
     const cafeReadyList = document.getElementById('cafe-ready-list') as HTMLElement;
     const cafeInventoryItems = document.getElementById('cafe-inventory-items') as HTMLElement;
     const cafeCarryBadge = document.getElementById('cafe-carry-badge') as HTMLElement;
@@ -107,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cafeOpenTutorialBtn = document.getElementById('cafe-open-tutorial') as HTMLButtonElement;
     const cafeTutorialOverlay = document.getElementById('cafe-tutorial-overlay') as HTMLElement;
     const cafeTutorialClose = document.getElementById('cafe-close-tutorial') as HTMLButtonElement;
+    const kitchenItemsLayer = document.getElementById('kitchen-items-layer') as HTMLElement;
 
 
     // --- Audio Engine ---
@@ -270,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let maxCarry = 10;
     let carryType: 'none' | 'potato' | 'sliced' = 'none';
     const POTATO_SPAWN_INTERVAL = 3000; // ms
-    let potatoSpawnTimer: number | null = null;
     let cafePlayerX = window.innerWidth / 2, cafePlayerY = window.innerHeight / 2;
     let cafePlayerTargetX = cafePlayerX, cafePlayerTargetY = cafePlayerY;
     let currentCafeMovePromise: Function | null = null;
@@ -284,10 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let cafeCustomers: CafeCustomer[] = [];
     let cafeReadyDishes: { dish: CafeDish; element: HTMLElement; createdAt: number }[] = [];
     let cafeCashDrops: { value: number; element: HTMLElement; isTip: boolean }[] = [];
-    let cafeCustomerSpawnId: number | null = null;
-    let cafeKitchenLoopId: number | null = null;
-    let cafeServingLoopId: number | null = null;
-    let cafePatienceLoopId: number | null = null;
+    let cafeLoopHandle: number | null = null;
+    let cafeLoopLast = 0;
+    const cafeLoopTimers = { spawn: 0, kitchen: 0, serve: 0, patience: 0, potatoes: 0 };
     let cafeCustomerCounter = 1;
     let cafeActiveMenu: CafeDish[] = [];
     let cafeRibbonTimer: number | null = null;
@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     type CafeDish = { name: string; emoji: string; reward: number; signature?: boolean; locked?: boolean; city: string; };
-    type CafeCustomer = { id: number; element: HTMLElement; order: CafeDish; patience: number; state: 'queue' | 'eating' | 'leaving'; mood: 'happy' | 'angry' | 'neutral'; tableIndex?: number; seatEl?: HTMLElement; };
+    type CafeCustomer = { id: number; element?: HTMLElement | null; order: CafeDish; patience: number; maxPatience: number; state: 'queue' | 'eating' | 'leaving'; mood: 'happy' | 'angry' | 'neutral'; tableIndex?: number; seatEl?: HTMLElement; icon: string; };
     type CafeMenuConfig = { signature: { name: string; emoji: string; } | null; sides: { name: string; emoji: string; }[]; accent?: string; };
     const defaultCafeMenu: CafeMenuConfig = { signature: { name: 'World Tour Fries', emoji: '🍟' }, sides: [{ name: 'Airport Coffee', emoji: '☕️' }] };
     const cafeCityMenus: Record<string, CafeMenuConfig> = {
@@ -1470,11 +1470,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderOrdersList() {
         if (!cafeOrdersList) return;
         cafeOrdersList.innerHTML = '';
+        const branch = flightData.find(f => f.city === cafeBranchCity);
+        const branchFlag = branch?.visa ?? '';
+
         cafeCustomers.filter(c => c.state === 'queue').forEach(customer => {
-            const row = document.createElement('li');
-            row.className = 'order-row';
-            row.innerHTML = `<span>${customer.order.emoji} ${customer.order.name}</span><small>Patience: ${customer.patience}s</small>`;
-            cafeOrdersList.appendChild(row);
+            const card = document.createElement('div');
+            card.className = 'order-card';
+            const patiencePct = Math.max(0, (customer.patience / customer.maxPatience) * 100);
+            card.innerHTML = `
+                <div class="order-row-top">${branchFlag} ${customer.icon} <span>${cafeBranchCity}</span></div>
+                <div class="order-row-middle">${customer.order.emoji} ${customer.order.name}</div>
+                <div class="order-row-bottom"><div class="fill" style="width:${patiencePct}%"></div></div>
+            `;
+            customer.element = card;
+            cafeOrdersList.appendChild(card);
         });
     }
 
@@ -1500,11 +1509,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshCafeHUD() {
-        if (cafeMoneyTotal) cafeMoneyTotal.textContent = `$${score}`;
-        if (cafeCityChip) cafeCityChip.textContent = `${cafeBranchCity} Branch`;
-        const queueCount = cafeCustomers.filter(c => c.state === 'queue').length;
-        if (cafeOrdersTotal) cafeOrdersTotal.textContent = `${queueCount}`;
-        if (cafeReadyTotal) cafeReadyTotal.textContent = `${cafeReadyDishes.length}`;
+        if (cafeMoneyValue) cafeMoneyValue.textContent = `$${score}`;
+        if (cafeCityName) cafeCityName.textContent = cafeBranchCity;
+        const mainDish = cafeActiveMenu[0];
+        if (mainDish) {
+            if (cafeMainDishEmoji) cafeMainDishEmoji.textContent = mainDish.emoji;
+            if (cafeMainDishName) cafeMainDishName.textContent = mainDish.name;
+        }
+        if (cafeAutomationPill) {
+            cafeAutomationPill.textContent = `Automation: ${(hasCollector || hasCook) ? 'ON' : 'OFF'}`;
+        }
         if (cafeCarryBadge) cafeCarryBadge.textContent = `Carrying ${carriedItems} ${carryType === 'potato' ? '🥔' : carryType === 'sliced' ? '🔪' : ''}`;
         if (cafeCapacityText) cafeCapacityText.textContent = `Capacity ${carriedItems}/${maxCarry}`;
         renderOrdersList();
@@ -1539,24 +1553,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateCafeQueuePositions() {
-        Array.from(cafeQueue.children).forEach((child, idx) => {
-            (child as HTMLElement).style.transform = `translateY(${idx * -4}px)`;
-        });
+        // Orders are rendered in a vertical list; spacing handled by CSS.
     }
 
     function spawnCafeCustomer() {
         if (!cafeActive || cafeActiveMenu.length === 0) return;
         const order = cafeActiveMenu[Math.floor(Math.random() * cafeActiveMenu.length)];
         const patience = 10 + Math.floor(Math.random() * 8);
-        const customerEl = document.createElement('div');
-        customerEl.className = 'cafe-customer';
-        customerEl.innerHTML = `
-            <span class="customer-emoji">${cafeCustomerEmojis[Math.floor(Math.random() * cafeCustomerEmojis.length)]}</span>
-            <span class="order-bubble">${order.emoji}</span>
-            <div class="customer-patience"><div class="fill" style="width:100%"></div></div>
-        `;
-        cafeQueue.appendChild(customerEl);
-        cafeCustomers.push({ id: cafeCustomerCounter++, element: customerEl, order, patience, state: 'queue', mood: 'neutral' });
+        const icon = cafeCustomerEmojis[Math.floor(Math.random() * cafeCustomerEmojis.length)];
+        cafeCustomers.push({ id: cafeCustomerCounter++, element: null as any, order, patience, maxPatience: patience, state: 'queue', mood: 'neutral', icon });
         updateCafeQueuePositions();
         refreshCafeHUD();
     }
@@ -1624,9 +1629,10 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDishStackPositions();
 
         placeCustomerAtTable(nextCustomer);
-        nextCustomer.element.remove();
+        nextCustomer.element?.remove();
         nextCustomer.state = 'eating';
         updateCafeQueuePositions();
+        renderOrdersList();
 
         const seatMood = nextCustomer.seatEl?.querySelector('.mood') as HTMLElement | null;
         if (seatMood) seatMood.textContent = '😋';
@@ -1647,14 +1653,17 @@ document.addEventListener('DOMContentLoaded', () => {
         cafeCustomers.forEach(customer => {
             if (customer.state !== 'queue') return;
             customer.patience -= 1;
-            const fill = customer.element.querySelector('.customer-patience .fill') as HTMLElement | null;
-            if (fill) fill.style.width = `${Math.max(0, (customer.patience / 16) * 100)}%`;
+            const fill = customer.element?.querySelector('.order-row-bottom .fill') as HTMLElement | null;
+            if (fill) fill.style.width = `${Math.max(0, (customer.patience / customer.maxPatience) * 100)}%`;
             if (customer.patience <= 0) {
-                customer.element.classList.add('angry');
-                customer.element.innerHTML = `<span class="customer-emoji">😡</span><span class="order-bubble">${customer.order.emoji}</span>`;
-                setTimeout(() => customer.element.remove(), 300);
+                if (customer.element) {
+                    customer.element.classList.add('angry');
+                    customer.element.innerHTML = `<div class="order-row-top">${customer.order.emoji} 😡</div>`;
+                    setTimeout(() => customer.element.remove(), 300);
+                }
                 cafeCustomers = cafeCustomers.filter(c => c.id !== customer.id);
                 updateCafeQueuePositions();
+                renderOrdersList();
                 refreshCafeHUD();
             }
         });
@@ -1681,26 +1690,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startCafeBranchLoops() {
-        if (cafeCustomerSpawnId) clearInterval(cafeCustomerSpawnId);
-        if (cafeKitchenLoopId) clearInterval(cafeKitchenLoopId);
-        if (cafeServingLoopId) clearInterval(cafeServingLoopId);
-        if (cafePatienceLoopId) clearInterval(cafePatienceLoopId);
+        stopCafeBranchLoops();
+        cafeLoopTimers.spawn = cafeLoopTimers.kitchen = cafeLoopTimers.serve = cafeLoopTimers.patience = cafeLoopTimers.potatoes = 0;
+        cafeLoopLast = 0;
 
-        cafeCustomerSpawnId = window.setInterval(spawnCafeCustomer, 3500);
-        cafeKitchenLoopId = window.setInterval(cookCafeDishForQueue, 2600);
-        cafeServingLoopId = window.setInterval(serveCafeQueue, 1500);
-        cafePatienceLoopId = window.setInterval(tickCafePatience, 1000);
+        const runCafeLoop = (timestamp: number) => {
+            if (!cafeActive) { return; }
+            if (!cafeLoopLast) cafeLoopLast = timestamp;
+            const delta = timestamp - cafeLoopLast;
+            cafeLoopLast = timestamp;
+
+            cafeLoopTimers.spawn += delta;
+            cafeLoopTimers.kitchen += delta;
+            cafeLoopTimers.serve += delta;
+            cafeLoopTimers.patience += delta;
+            cafeLoopTimers.potatoes += delta;
+
+            while (cafeLoopTimers.spawn >= 3500) {
+                spawnCafeCustomer();
+                cafeLoopTimers.spawn -= 3500;
+            }
+            while (cafeLoopTimers.kitchen >= 2600) {
+                cookCafeDishForQueue();
+                cafeLoopTimers.kitchen -= 2600;
+            }
+            while (cafeLoopTimers.serve >= 1500) {
+                serveCafeQueue();
+                cafeLoopTimers.serve -= 1500;
+            }
+            while (cafeLoopTimers.patience >= 1000) {
+                tickCafePatience();
+                cafeLoopTimers.patience -= 1000;
+            }
+            while (cafeLoopTimers.potatoes >= POTATO_SPAWN_INTERVAL) {
+                spawnPotato();
+                cafeLoopTimers.potatoes -= POTATO_SPAWN_INTERVAL;
+            }
+
+            cafeLoopHandle = requestAnimationFrame(runCafeLoop);
+        };
 
         spawnCafeCustomer();
         cookCafeDishForQueue();
+        spawnPotato();
+        cafeLoopHandle = requestAnimationFrame(runCafeLoop);
     }
 
     function stopCafeBranchLoops() {
-        if (cafeCustomerSpawnId) clearInterval(cafeCustomerSpawnId);
-        if (cafeKitchenLoopId) clearInterval(cafeKitchenLoopId);
-        if (cafeServingLoopId) clearInterval(cafeServingLoopId);
-        if (cafePatienceLoopId) clearInterval(cafePatienceLoopId);
-        cafeCustomerSpawnId = cafeKitchenLoopId = cafeServingLoopId = cafePatienceLoopId = null;
+        if (cafeLoopHandle) cancelAnimationFrame(cafeLoopHandle);
+        cafeLoopHandle = null;
         cafeActiveMenu = [];
         resetCafeStacks();
     }
@@ -1715,13 +1753,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function spawnPotato() {
-        if (!cafeActive) return;
-        const pot = document.createElement('div');
-        pot.className = 'potato';
+        if (!cafeActive || !kitchenItemsLayer) return;
+        const pot = document.createElement('span');
+        pot.className = 'kitchen-item potato';
         pot.textContent = '🥔';
-        pot.style.left = `${10 + Math.random() * 80}%`;
-        pot.style.top = `${40 + Math.random() * 50}%`;
-        cafeWorldContainer.appendChild(pot);
+        pot.style.left = `${12 + Math.random() * 6}%`;
+        pot.style.top = `${45 + Math.random() * 10}%`;
+        kitchenItemsLayer.appendChild(pot);
         potatoes.push(pot);
 
         pot.addEventListener('click', async () => {
@@ -1806,9 +1844,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showCafeRibbon();
         startCafeBranchLoops();
 
-        potatoSpawnTimer = window.setInterval(spawnPotato, POTATO_SPAWN_INTERVAL);
-        spawnPotato();
-
         updateButtonStates();
         // Start automation if unlocked
         if (hasCollector) {
@@ -1829,10 +1864,6 @@ document.addEventListener('DOMContentLoaded', () => {
         hideCafeRibbon();
 
         stopCafeBranchLoops();
-
-        stopCafeBranchLoops();
-
-        if (potatoSpawnTimer) clearInterval(potatoSpawnTimer);
         if (collectorIntervalId) clearInterval(collectorIntervalId);
         if (cookIntervalId) clearInterval(cookIntervalId);
 
