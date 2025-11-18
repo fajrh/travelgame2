@@ -85,6 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const stationPotatoBin = document.getElementById('station-potato-bin') as HTMLElement;
     const stationSlicer = document.getElementById('station-slicer') as HTMLElement;
     const stationFryer = document.getElementById('station-fryer') as HTMLElement;
+    const cafeBranchBanner = document.getElementById('cafe-branch-banner') as HTMLElement;
+    const cafeBranchTitle = document.getElementById('cafe-branch-title') as HTMLElement;
+    const cafeBranchMenu = document.getElementById('cafe-branch-menu') as HTMLElement;
+    const cafeQueue = document.getElementById('cafe-queue') as HTMLElement;
+    const cafeDishStack = document.getElementById('cafe-dish-stack') as HTMLElement;
+    const cafeCashStack = document.getElementById('cafe-cash-stack') as HTMLElement;
+    const cafeCustomerTables = document.getElementById('cafe-customer-tables') as HTMLElement;
 
 
     // --- Audio Engine ---
@@ -258,6 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let cookIntervalId: number | null = null;
     let isCollectorBusy = false;
     let isCookBusy = false;
+    let cafeBranchCity = 'Istanbul';
+    let cafeCustomers: CafeCustomer[] = [];
+    let cafeReadyDishes: { dish: CafeDish; element: HTMLElement; createdAt: number }[] = [];
+    let cafeCashDrops: { value: number; element: HTMLElement; isTip: boolean }[] = [];
+    let cafeCustomerSpawnId: number | null = null;
+    let cafeKitchenLoopId: number | null = null;
+    let cafeServingLoopId: number | null = null;
+    let cafePatienceLoopId: number | null = null;
+    let cafeCustomerCounter = 1;
+    let cafeActiveMenu: CafeDish[] = [];
 
 
     // --- Data ---
@@ -296,6 +313,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const availableFoods: { name: string; emoji: string; reward: number; }[] = [
         { name: 'Fries', emoji: '🍟', reward: 200 }
     ];
+
+    type CafeDish = { name: string; emoji: string; reward: number; signature?: boolean; locked?: boolean; city: string; };
+    type CafeCustomer = { id: number; element: HTMLElement; order: CafeDish; patience: number; state: 'queue' | 'eating' | 'leaving'; mood: 'happy' | 'angry' | 'neutral'; tableIndex?: number; seatEl?: HTMLElement; };
+    type CafeMenuConfig = { signature: { name: string; emoji: string; } | null; sides: { name: string; emoji: string; }[]; accent?: string; };
+    const defaultCafeMenu: CafeMenuConfig = { signature: { name: 'World Tour Fries', emoji: '🍟' }, sides: [{ name: 'Airport Coffee', emoji: '☕️' }] };
+    const cafeCityMenus: Record<string, CafeMenuConfig> = {
+        'Istanbul': { signature: { name: 'Kebab Plate', emoji: '🥙' }, sides: [{ name: 'Simit Circle', emoji: '🥯' }, { name: 'Turkish Tea', emoji: '☕️' }] },
+        'Paris': { signature: { name: 'Croissant', emoji: '🥐' }, sides: [{ name: 'Baguette Sandwich', emoji: '🥖' }, { name: 'Cheese Platter', emoji: '🧀' }, { name: 'Coffee', emoji: '☕️' }] },
+        'Kyoto': { signature: { name: 'Sushi Set', emoji: '🍣' }, sides: [{ name: 'Matcha Tea', emoji: '🍵' }, { name: 'Sakura Mochi', emoji: '🍡' }] },
+        'Sydney': { signature: { name: 'Meat Pie', emoji: '🥧' }, sides: [{ name: 'BBQ Skewer', emoji: '🍖' }, { name: 'Flat White', emoji: '☕️' }] },
+        'Barcelona': { signature: { name: 'Paella Bowl', emoji: '🥘' }, sides: [{ name: 'Tapas Plate', emoji: '🍤' }, { name: 'Sangria', emoji: '🍷' }] },
+        'London': { signature: { name: 'Fish & Chips', emoji: '🐟🍟' }, sides: [{ name: 'Tea & Biscuits', emoji: '☕🍪' }] },
+        'New York': { signature: { name: 'Slice of Pizza', emoji: '🍕' }, sides: [{ name: 'Soft Pretzel', emoji: '🥨' }, { name: 'NYC Coffee', emoji: '☕' }] },
+        'Bangkok': { signature: { name: 'Curry Bowl', emoji: '🍛' }, sides: [{ name: 'Mango Sticky Rice', emoji: '🥭🍚' }, { name: 'Noodles', emoji: '🍜' }] },
+        'Cape Town': { signature: { name: 'Biltong Plate', emoji: '🥩' }, sides: [{ name: 'Wine Tasting', emoji: '🍷' }, { name: 'Rooibos Tea', emoji: '☕' }] },
+        'Budapest': { signature: { name: 'Goulash', emoji: '🍲' }, sides: [{ name: 'Paprika Chips', emoji: '🌶️' }, { name: 'Bread Basket', emoji: '🥖' }] },
+        'Cairo': { signature: { name: 'Falafel Plate', emoji: '🧆' }, sides: [{ name: 'Koshary Bowl', emoji: '🍚' }, { name: 'Mint Tea', emoji: '☕' }] },
+        'Jeddah': { signature: { name: 'Kabsa', emoji: '🍛' }, sides: [{ name: 'Dates Plate', emoji: '🌴' }, { name: 'Arabic Coffee', emoji: '☕' }] },
+        'Karachi': { signature: { name: 'Biryani', emoji: '🍛' }, sides: [{ name: 'Bun Kebab', emoji: '🍔' }, { name: 'Doodh Patti', emoji: '☕️' }] },
+        'Toronto': { signature: { name: 'Runway Fries', emoji: '🍟' }, sides: [{ name: 'Maple Latte', emoji: '🍁☕️' }] },
+    };
+    const cafeCustomerEmojis = ['🙂', '🧕', '👨‍💼', '🧳', '👔', '📸', '🧑‍🍳'];
 
     // --- Game State Persistence ---
     function saveGameState() {
@@ -1201,6 +1240,59 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetBoard() {
         [firstCard, secondCard, lockBoard] = [null, null, false];
     }
+
+    function getCafeMenuConfig(city: string): CafeMenuConfig {
+        return cafeCityMenus[city] ?? defaultCafeMenu;
+    }
+
+    function resolveCafeCityBranch(): string {
+        if (cafeCityMenus[currentLocation]) return currentLocation;
+        const visitedCity = Array.from(visitedCities).find(city => cafeCityMenus[city]);
+        if (visitedCity) return visitedCity;
+        return 'Istanbul';
+    }
+
+    function getCafeAccent(city: string): string {
+        const flight = flightData.find(f => f.city === city);
+        return flight?.flagColors?.[0] ?? '#8b5a2b';
+    }
+
+    function buildCafeMenu(city: string): CafeDish[] {
+        const config = getCafeMenuConfig(city);
+        const recipe = flightData.find(f => f.city === city)?.recipe;
+        const signatureBase = Math.max(60, Math.round(((recipe?.cost ?? 360) / 3)));
+        const sideBase = Math.max(28, Math.round(signatureBase * 0.45));
+        const signatureUnlocked = config.signature ? (unlockedRecipes.has(city) || !flightData.find(f => f.city === city)) : false;
+        const menu: CafeDish[] = [];
+
+        if (config.signature) {
+            const reward = signatureUnlocked ? signatureBase : Math.round(signatureBase * 0.6);
+            menu.push({
+                name: config.signature.name,
+                emoji: config.signature.emoji,
+                reward,
+                signature: true,
+                locked: !signatureUnlocked,
+                city
+            });
+        }
+
+        config.sides.forEach((side, index) => {
+            const reward = Math.max(18, Math.round(sideBase * (1.05 - index * 0.08)));
+            menu.push({ name: side.name, emoji: side.emoji, reward, city });
+        });
+
+        return menu;
+    }
+
+    function renderCafeMenuChips(menu: CafeDish[]) {
+        cafeBranchMenu.innerHTML = menu.map(dish => `
+            <span class="cafe-chip ${dish.locked ? 'locked' : ''}">
+                <span class="chip-label">${dish.emoji}</span>
+                ${dish.name} · $${dish.reward}${dish.signature ? ' ⭐' : ''}${dish.locked ? ' (preview)' : ''}
+            </span>
+        `).join('');
+    }
     
     const GRID_SIZE = 8;
     let gemGrid: (string | null)[][] = [];
@@ -1342,6 +1434,193 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Cafe Tycoon Logic ---
+    function resetCafeStacks() {
+        cafeQueue.innerHTML = '';
+        cafeDishStack.innerHTML = '';
+        cafeCashStack.innerHTML = '';
+        cafeCustomerTables.innerHTML = '';
+        cafeCustomers = [];
+        cafeReadyDishes = [];
+        cafeCashDrops = [];
+        for (let i = 0; i < 3; i++) {
+            const table = document.createElement('div');
+            table.className = 'cafe-table';
+            cafeCustomerTables.appendChild(table);
+        }
+    }
+
+    function updateDishStackPositions() {
+        cafeReadyDishes.forEach((item, index) => {
+            item.element.style.transform = `translate(-50%, ${-index * 10}px)`;
+        });
+    }
+
+    function updateCashStackPositions() {
+        cafeCashDrops.forEach((item, index) => {
+            item.element.style.transform = `translate(-50%, ${-index * 8}px)`;
+        });
+    }
+
+    function updateCafeQueuePositions() {
+        Array.from(cafeQueue.children).forEach((child, idx) => {
+            (child as HTMLElement).style.transform = `translateY(${idx * -4}px)`;
+        });
+    }
+
+    function spawnCafeCustomer() {
+        if (!cafeActive || cafeActiveMenu.length === 0) return;
+        const order = cafeActiveMenu[Math.floor(Math.random() * cafeActiveMenu.length)];
+        const patience = 10 + Math.floor(Math.random() * 8);
+        const customerEl = document.createElement('div');
+        customerEl.className = 'cafe-customer';
+        customerEl.innerHTML = `
+            <span class="customer-emoji">${cafeCustomerEmojis[Math.floor(Math.random() * cafeCustomerEmojis.length)]}</span>
+            <span class="order-bubble">${order.emoji}</span>
+            <div class="customer-patience"><div class="fill" style="width:100%"></div></div>
+        `;
+        cafeQueue.appendChild(customerEl);
+        cafeCustomers.push({ id: cafeCustomerCounter++, element: customerEl, order, patience, state: 'queue', mood: 'neutral' });
+        updateCafeQueuePositions();
+    }
+
+    function cookCafeDishForQueue() {
+        if (!cafeActive || cafeActiveMenu.length === 0) return;
+        const waitingOrder = cafeCustomers.find(c => c.state === 'queue');
+        const dish = waitingOrder?.order ?? cafeActiveMenu[Math.floor(Math.random() * cafeActiveMenu.length)];
+        const item = document.createElement('div');
+        item.className = 'stack-item';
+        item.innerHTML = `<span class="plate">${dish.emoji}</span> <span>${dish.name}</span>`;
+        cafeDishStack.appendChild(item);
+        cafeReadyDishes.unshift({ dish, element: item, createdAt: Date.now() });
+        updateDishStackPositions();
+    }
+
+    function placeCustomerAtTable(customer: CafeCustomer) {
+        const tables = Array.from(cafeCustomerTables.children) as HTMLElement[];
+        let targetIndex = customer.tableIndex ?? tables.findIndex(t => !t.querySelector('.seated-customer'));
+        if (targetIndex === -1) targetIndex = 0;
+        customer.tableIndex = targetIndex;
+        const table = tables[targetIndex];
+        table.querySelector('.seated-customer')?.remove();
+        const seated = document.createElement('div');
+        seated.className = 'seated-customer';
+        seated.innerHTML = `<div class="mood">🙂</div><div class="dish">${customer.order.emoji}</div>`;
+        table.appendChild(seated);
+        customer.seatEl = seated;
+    }
+
+    function addCafeCash(amount: number, isTip: boolean) {
+        const item = document.createElement('div');
+        item.className = `cash-item ${isTip ? 'tip' : ''}`;
+        item.textContent = isTip ? '💰' : '💵';
+        cafeCashStack.appendChild(item);
+        cafeCashDrops.unshift({ value: amount, element: item, isTip });
+        updateCashStackPositions();
+    }
+
+    function collectCafeCash() {
+        if (cafeCashDrops.length === 0) return;
+        let total = 0;
+        cafeCashDrops.forEach(drop => {
+            total += drop.value;
+            drop.element.remove();
+        });
+        cafeCashDrops = [];
+        updateScore(total);
+        showEarningToast(total);
+        playSound('earn');
+    }
+
+    function serveCafeQueue() {
+        if (!cafeActive || cafeCustomers.length === 0 || cafeReadyDishes.length === 0) return;
+        const nextCustomer = cafeCustomers.find(c => c.state === 'queue');
+        if (!nextCustomer) return;
+
+        const matchingIndex = cafeReadyDishes.findIndex(stack => stack.dish.emoji === nextCustomer.order.emoji);
+        const stackItem = matchingIndex >= 0 ? cafeReadyDishes.splice(matchingIndex, 1)[0] : cafeReadyDishes.pop();
+        if (!stackItem) return;
+        stackItem.element.remove();
+        updateDishStackPositions();
+
+        placeCustomerAtTable(nextCustomer);
+        nextCustomer.element.remove();
+        nextCustomer.state = 'eating';
+        updateCafeQueuePositions();
+
+        const seatMood = nextCustomer.seatEl?.querySelector('.mood') as HTMLElement | null;
+        if (seatMood) seatMood.textContent = '😋';
+
+        setTimeout(() => {
+            const tipChance = nextCustomer.order.signature ? 0.35 : 0.15;
+            const tip = Math.random() < tipChance;
+            const reward = nextCustomer.order.reward + (tip ? Math.round(nextCustomer.order.reward * 0.3) : 0);
+            addCafeCash(reward, tip);
+            nextCustomer.seatEl?.remove();
+            cafeCustomers = cafeCustomers.filter(c => c.id !== nextCustomer.id);
+        }, 1400);
+    }
+
+    function tickCafePatience() {
+        if (!cafeActive) return;
+        cafeCustomers.forEach(customer => {
+            if (customer.state !== 'queue') return;
+            customer.patience -= 1;
+            const fill = customer.element.querySelector('.customer-patience .fill') as HTMLElement | null;
+            if (fill) fill.style.width = `${Math.max(0, (customer.patience / 16) * 100)}%`;
+            if (customer.patience <= 0) {
+                customer.element.classList.add('angry');
+                customer.element.innerHTML = `<span class="customer-emoji">😡</span><span class="order-bubble">${customer.order.emoji}</span>`;
+                setTimeout(() => customer.element.remove(), 300);
+                cafeCustomers = cafeCustomers.filter(c => c.id !== customer.id);
+                updateCafeQueuePositions();
+            }
+        });
+    }
+
+    function setupCafeBranch(city: string) {
+        cafeBranchCity = city;
+        cafeActiveMenu = buildCafeMenu(city);
+        resetCafeStacks();
+        renderCafeMenuChips(cafeActiveMenu);
+        const accent = getCafeAccent(city);
+        cafeWorldContainer.style.setProperty('--cafe-accent', accent);
+        cafeBranchBanner.style.border = `2px solid ${accent}`;
+        cafeBranchTitle.textContent = `Fajr's Café · ${city}`;
+        const flight = flightData.find(f => f.city === city);
+        if (flight?.restaurantImage) {
+            cafeWorldContainer.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), url(${flight.restaurantImage})`;
+            cafeWorldContainer.style.backgroundSize = 'cover';
+            cafeWorldContainer.style.backgroundPosition = 'center';
+        } else {
+            cafeWorldContainer.style.backgroundImage = '';
+        }
+    }
+
+    function startCafeBranchLoops() {
+        if (cafeCustomerSpawnId) clearInterval(cafeCustomerSpawnId);
+        if (cafeKitchenLoopId) clearInterval(cafeKitchenLoopId);
+        if (cafeServingLoopId) clearInterval(cafeServingLoopId);
+        if (cafePatienceLoopId) clearInterval(cafePatienceLoopId);
+
+        cafeCustomerSpawnId = window.setInterval(spawnCafeCustomer, 3500);
+        cafeKitchenLoopId = window.setInterval(cookCafeDishForQueue, 2600);
+        cafeServingLoopId = window.setInterval(serveCafeQueue, 1500);
+        cafePatienceLoopId = window.setInterval(tickCafePatience, 1000);
+
+        spawnCafeCustomer();
+        cookCafeDishForQueue();
+    }
+
+    function stopCafeBranchLoops() {
+        if (cafeCustomerSpawnId) clearInterval(cafeCustomerSpawnId);
+        if (cafeKitchenLoopId) clearInterval(cafeKitchenLoopId);
+        if (cafeServingLoopId) clearInterval(cafeServingLoopId);
+        if (cafePatienceLoopId) clearInterval(cafePatienceLoopId);
+        cafeCustomerSpawnId = cafeKitchenLoopId = cafeServingLoopId = cafePatienceLoopId = null;
+        cafeActiveMenu = [];
+        resetCafeStacks();
+    }
+
     function moveEntityInCafe(targetElement: HTMLElement) {
         return new Promise<void>(resolve => {
             const rect = targetElement.getBoundingClientRect();
@@ -1436,6 +1715,10 @@ document.addEventListener('DOMContentLoaded', () => {
         cafePlayerTargetX = cafePlayerX;
         cafePlayerTargetY = cafePlayerY;
 
+        cafeBranchCity = resolveCafeCityBranch();
+        setupCafeBranch(cafeBranchCity);
+        startCafeBranchLoops();
+
         potatoSpawnTimer = window.setInterval(spawnPotato, POTATO_SPAWN_INTERVAL);
         spawnPotato();
 
@@ -1456,6 +1739,8 @@ document.addEventListener('DOMContentLoaded', () => {
         worldMap.classList.remove('hidden');
         cafeWorldContainer.classList.add('hidden');
         personContainer.classList.remove('hidden');
+
+        stopCafeBranchLoops();
 
         if (potatoSpawnTimer) clearInterval(potatoSpawnTimer);
         if (collectorIntervalId) clearInterval(collectorIntervalId);
@@ -1638,6 +1923,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         unlockedRecipes.set(flight.city, item as any);
                         playGenericCelebration('recipe-celebration', `${item!.name} added to Fajr's Café!`);
                         updateAvailableFoods();
+                        if (cafeActive && cafeBranchCity === flight.city) {
+                            setupCafeBranch(cafeBranchCity);
+                            startCafeBranchLoops();
+                        }
                         const narration = recipeNarration[flight.city];
                         if (narration) speak(narration, flight.lang);
                     }
@@ -1849,6 +2138,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const mfRect = mfGroupContainer.getBoundingClientRect();
         targetX = mfRect.left + mfRect.width / 2;
         targetY = mfRect.top + mfRect.height / 2;
+    });
+
+    cafeCashStack.addEventListener('click', () => {
+        if (!cafeActive) return;
+        collectCafeCash();
     });
 
     cafeUpgradesBtn.addEventListener('click', () => {

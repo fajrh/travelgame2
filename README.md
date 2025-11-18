@@ -48,3 +48,7 @@ This will create a `dist` directory with all the static files needed to host the
 ```bash
 npm run preview
 ```
+## Deploying to Cloud Run
+
+- Trigger Cloud Build with the provided `cloudbuild.yaml`, setting `IMAGE` (for example `gcr.io/$PROJECT_ID/travelgame2`) so the Dockerfile is used for container builds.
+- The Dockerfile uses `npm install` instead of `npm ci`, allowing the build to reconcile `package-lock.json` and `package.json` automatically inside Cloud Build and avoid lockfile mismatch failures.
