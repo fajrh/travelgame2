@@ -1830,6 +1830,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         stopCafeBranchLoops();
 
+        stopCafeBranchLoops();
+
         if (potatoSpawnTimer) clearInterval(potatoSpawnTimer);
         if (collectorIntervalId) clearInterval(collectorIntervalId);
         if (cookIntervalId) clearInterval(cookIntervalId);
