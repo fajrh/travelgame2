@@ -1292,6 +1292,203 @@
             z-index: 101;
         }
 
+        /* Cafe stacking HUD */
+        #cafe-branch-banner {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(120deg, rgba(0,0,0,0.7), rgba(0,0,0,0.55));
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 16px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+            z-index: 102;
+            text-align: center;
+            min-width: min(90vw, 620px);
+        }
+        #cafe-branch-title {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            font-size: 1rem;
+        }
+        #cafe-branch-menu {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px 10px;
+            margin-top: 6px;
+            font-size: 0.95rem;
+        }
+        .cafe-chip {
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 999px;
+            padding: 4px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        .cafe-chip.locked {
+            opacity: 0.65;
+        }
+        .chip-label { font-weight: 600; }
+
+        /* Cafe scene layout */
+        #cafe-queue {
+            position: absolute;
+            bottom: 120px;
+            left: 16px;
+            width: min(220px, 25vw);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 101;
+        }
+        .cafe-customer {
+            background: #fff8e6;
+            border: 2px solid var(--cafe-accent, #8b5a2b);
+            border-radius: 14px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.12);
+            position: relative;
+            overflow: hidden;
+        }
+        .customer-patience {
+            position: absolute;
+            bottom: 4px;
+            left: 10px;
+            right: 10px;
+            height: 6px;
+            background: rgba(0,0,0,0.08);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .customer-patience .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7ed957, #4caf50);
+            width: 100%;
+            transition: width 0.3s ease;
+        }
+        .order-bubble {
+            background: #fff;
+            border-radius: 12px;
+            padding: 4px 8px;
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            font-weight: 700;
+        }
+        .customer-emoji { font-size: 1.4rem; }
+
+        #cafe-pass-window {
+            position: absolute;
+            left: 36%;
+            top: 24%;
+            width: 240px;
+            min-height: 160px;
+            background: #fff;
+            border: 3px solid var(--cafe-accent, #8b5a2b);
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.2);
+            z-index: 101;
+        }
+        .stack-label { font-weight: 800; color: #5b4326; letter-spacing: 0.4px; }
+        .stack-column { position: relative; width: 100%; height: 120px; margin-top: 10px; }
+        .stack-item {
+            position: absolute;
+            left: 50%;
+            transform: translate(-50%, 0);
+            padding: 6px 12px;
+            background: #fff6d8;
+            border: 2px solid var(--cafe-accent, #8b5a2b);
+            border-radius: 12px;
+            box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+            justify-content: center;
+        }
+        .stack-item .plate { font-size: 1.3rem; }
+
+        #cafe-table-area {
+            position: absolute;
+            right: 18px;
+            bottom: 36px;
+            width: min(42vw, 520px);
+            height: min(42vh, 380px);
+            background: rgba(255,255,255,0.8);
+            border: 3px solid var(--cafe-accent, #8b5a2b);
+            border-radius: 18px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+            padding: 12px;
+            z-index: 101;
+        }
+        #cafe-customer-tables {
+            position: absolute;
+            left: 12px;
+            right: 110px;
+            bottom: 10px;
+            top: 10px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .cafe-table {
+            flex: 1;
+            min-width: 90px;
+            background: #ffe9c8;
+            border: 2px dashed rgba(0,0,0,0.12);
+            border-radius: 14px;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        .seated-customer {
+            position: absolute;
+            left: 50%;
+            bottom: 12px;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 1.3rem;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+        .seated-customer .mood { font-size: 1rem; }
+        .seated-customer .dish { font-size: 1.4rem; }
+
+        #cafe-cash-stack {
+            position: absolute;
+            width: 90px;
+            top: 16px;
+            bottom: 16px;
+            right: 12px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.08));
+            border-radius: 12px;
+            border: 2px dashed rgba(0,0,0,0.14);
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .cash-item {
+            position: absolute;
+            left: 50%;
+            transform: translate(-50%, 0);
+            font-size: 1.3rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18));
+            transition: transform 0.25s ease;
+        }
+        .cash-item.tip { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)); }
+        #cash-label { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); font-weight: 800; color: #4d3a1e; }
+
         @media (max-width: 1024px) {
             #score-container {
                 top: 12px;
@@ -1434,7 +1631,6 @@
     "fs": "https://aistudiocdn.com/fs@^0.0.1-security",
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "mysql2/": "https://aistudiocdn.com/mysql2@^3.15.3/",
     "dotenv/": "https://aistudiocdn.com/dotenv@^17.2.3/",
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.0",
     "express": "https://aistudiocdn.com/express@^5.1.0"
@@ -1505,8 +1701,25 @@
     <!-- FAJR'S CAFE TYCOON VIEW -->
     <div id="cafe-world-container" class="hidden">
         <div class="cafe-floor"></div>
-        <div id="cafe-instructions">Click 🥔 to pick up, then click stations to process!</div>
+        <div id="cafe-branch-banner">
+            <div id="cafe-branch-title">Fajr's Café · Istanbul</div>
+            <div id="cafe-branch-menu"></div>
+        </div>
+        <div id="cafe-instructions">Serve local dishes, stack plates at the pass, then tap the cash stack to collect! 💵</div>
         <div id="carry-counter" class="carry-counter">Carrying: 0</div>
+
+        <div id="cafe-queue"></div>
+
+        <div id="cafe-pass-window">
+            <div class="stack-label">Pass Window</div>
+            <div id="cafe-dish-stack" class="stack-column"></div>
+        </div>
+
+        <div id="cafe-table-area">
+            <div id="cash-label">Cash</div>
+            <div id="cafe-customer-tables"></div>
+            <div id="cafe-cash-stack"></div>
+        </div>
 
         <!-- Stations (static positions) -->
         <div id="station-potato-bin" class="station ingredient-bin" data-type="ingredient" style="left:10%;top:20%;">
