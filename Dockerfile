@@ -3,7 +3,9 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+# Use npm install instead of npm ci so Cloud Build can reconcile the
+# package-lock with package.json without failing on minor drift.
+RUN npm install --no-fund --no-audit
 
 COPY . .
 RUN npm run build
