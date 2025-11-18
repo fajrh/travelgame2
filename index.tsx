@@ -92,6 +92,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const cafeDishStack = document.getElementById('cafe-dish-stack') as HTMLElement;
     const cafeCashStack = document.getElementById('cafe-cash-stack') as HTMLElement;
     const cafeCustomerTables = document.getElementById('cafe-customer-tables') as HTMLElement;
+    const cafeCityChip = document.getElementById('cafe-city-chip') as HTMLElement;
+    const cafeMoneyTotal = document.getElementById('cafe-money-total') as HTMLElement;
+    const cafeOrdersTotal = document.getElementById('cafe-orders-total') as HTMLElement;
+    const cafeReadyTotal = document.getElementById('cafe-ready-total') as HTMLElement;
+    const cafeOrdersList = document.getElementById('cafe-orders-list') as HTMLElement;
+    const cafeReadyList = document.getElementById('cafe-ready-list') as HTMLElement;
+    const cafeInventoryItems = document.getElementById('cafe-inventory-items') as HTMLElement;
+    const cafeCarryBadge = document.getElementById('cafe-carry-badge') as HTMLElement;
+    const cafeCapacityText = document.getElementById('cafe-capacity-text') as HTMLElement;
+    const cafeInstructionRibbon = document.getElementById('cafe-instruction-ribbon') as HTMLElement;
+    const cafeRibbonClose = document.getElementById('cafe-ribbon-close') as HTMLButtonElement;
+    const cafeRibbonShow = document.getElementById('cafe-ribbon-show') as HTMLButtonElement;
+    const cafeOpenTutorialBtn = document.getElementById('cafe-open-tutorial') as HTMLButtonElement;
+    const cafeTutorialOverlay = document.getElementById('cafe-tutorial-overlay') as HTMLElement;
+    const cafeTutorialClose = document.getElementById('cafe-close-tutorial') as HTMLButtonElement;
 
 
     // --- Audio Engine ---
@@ -275,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cafePatienceLoopId: number | null = null;
     let cafeCustomerCounter = 1;
     let cafeActiveMenu: CafeDish[] = [];
+    let cafeRibbonTimer: number | null = null;
 
 
     // --- Data ---
@@ -560,6 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreEl.textContent = `$${score}`;
         updateButtonStates();
         saveGameState();
+        refreshCafeHUD();
     }
 
     // --- Movement & Game Loop ---
@@ -1447,6 +1464,66 @@ document.addEventListener('DOMContentLoaded', () => {
             table.className = 'cafe-table';
             cafeCustomerTables.appendChild(table);
         }
+        refreshCafeHUD();
+    }
+
+    function renderOrdersList() {
+        if (!cafeOrdersList) return;
+        cafeOrdersList.innerHTML = '';
+        cafeCustomers.filter(c => c.state === 'queue').forEach(customer => {
+            const row = document.createElement('li');
+            row.className = 'order-row';
+            row.innerHTML = `<span>${customer.order.emoji} ${customer.order.name}</span><small>Patience: ${customer.patience}s</small>`;
+            cafeOrdersList.appendChild(row);
+        });
+    }
+
+    function renderReadyList() {
+        if (!cafeReadyList) return;
+        cafeReadyList.innerHTML = '';
+        cafeReadyDishes.forEach((dishStack, idx) => {
+            const row = document.createElement('li');
+            row.className = 'order-row';
+            row.innerHTML = `<span>${dishStack.dish.emoji} ${dishStack.dish.name}</span><small>Stack #${idx + 1}</small>`;
+            cafeReadyList.appendChild(row);
+        });
+    }
+
+    function renderInventoryPanel() {
+        if (!cafeInventoryItems) return;
+        cafeInventoryItems.innerHTML = '';
+        const carrying = document.createElement('li');
+        carrying.className = 'order-row';
+        const typeIcon = carryType === 'potato' ? '🥔' : carryType === 'sliced' ? '🔪' : '👐';
+        carrying.innerHTML = `<span>${typeIcon} Carrying</span><small>${carriedItems}/${maxCarry}</small>`;
+        cafeInventoryItems.appendChild(carrying);
+    }
+
+    function refreshCafeHUD() {
+        if (cafeMoneyTotal) cafeMoneyTotal.textContent = `$${score}`;
+        if (cafeCityChip) cafeCityChip.textContent = `${cafeBranchCity} Branch`;
+        const queueCount = cafeCustomers.filter(c => c.state === 'queue').length;
+        if (cafeOrdersTotal) cafeOrdersTotal.textContent = `${queueCount}`;
+        if (cafeReadyTotal) cafeReadyTotal.textContent = `${cafeReadyDishes.length}`;
+        if (cafeCarryBadge) cafeCarryBadge.textContent = `Carrying ${carriedItems} ${carryType === 'potato' ? '🥔' : carryType === 'sliced' ? '🔪' : ''}`;
+        if (cafeCapacityText) cafeCapacityText.textContent = `Capacity ${carriedItems}/${maxCarry}`;
+        renderOrdersList();
+        renderReadyList();
+        renderInventoryPanel();
+    }
+
+    function showCafeRibbon() {
+        cafeInstructionRibbon?.classList.add('show');
+        cafeRibbonClose?.classList.remove('hidden');
+        cafeRibbonShow?.classList.add('hidden');
+        if (cafeRibbonTimer) clearTimeout(cafeRibbonTimer);
+        cafeRibbonTimer = window.setTimeout(() => hideCafeRibbon(), 5000);
+    }
+
+    function hideCafeRibbon() {
+        cafeInstructionRibbon?.classList.remove('show');
+        cafeRibbonClose?.classList.add('hidden');
+        cafeRibbonShow?.classList.remove('hidden');
     }
 
     function updateDishStackPositions() {
@@ -1481,6 +1558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cafeQueue.appendChild(customerEl);
         cafeCustomers.push({ id: cafeCustomerCounter++, element: customerEl, order, patience, state: 'queue', mood: 'neutral' });
         updateCafeQueuePositions();
+        refreshCafeHUD();
     }
 
     function cookCafeDishForQueue() {
@@ -1493,6 +1571,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cafeDishStack.appendChild(item);
         cafeReadyDishes.unshift({ dish, element: item, createdAt: Date.now() });
         updateDishStackPositions();
+        refreshCafeHUD();
     }
 
     function placeCustomerAtTable(customer: CafeCustomer) {
@@ -1516,6 +1595,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cafeCashStack.appendChild(item);
         cafeCashDrops.unshift({ value: amount, element: item, isTip });
         updateCashStackPositions();
+        refreshCafeHUD();
     }
 
     function collectCafeCash() {
@@ -1529,6 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateScore(total);
         showEarningToast(total);
         playSound('earn');
+        refreshCafeHUD();
     }
 
     function serveCafeQueue() {
@@ -1557,6 +1638,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addCafeCash(reward, tip);
             nextCustomer.seatEl?.remove();
             cafeCustomers = cafeCustomers.filter(c => c.id !== nextCustomer.id);
+            refreshCafeHUD();
         }, 1400);
     }
 
@@ -1573,6 +1655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => customer.element.remove(), 300);
                 cafeCustomers = cafeCustomers.filter(c => c.id !== customer.id);
                 updateCafeQueuePositions();
+                refreshCafeHUD();
             }
         });
     }
@@ -1594,6 +1677,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             cafeWorldContainer.style.backgroundImage = '';
         }
+        refreshCafeHUD();
     }
 
     function startCafeBranchLoops() {
@@ -1660,6 +1744,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateCarryCounter() {
         carryCounter.textContent = `Carrying: ${carriedItems} ${carryType === 'potato' ? '🥔' : carryType === 'sliced' ? '🔪' : ''}`;
+        refreshCafeHUD();
     }
 
     function resetCarry() {
@@ -1717,6 +1802,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         cafeBranchCity = resolveCafeCityBranch();
         setupCafeBranch(cafeBranchCity);
+        refreshCafeHUD();
+        showCafeRibbon();
         startCafeBranchLoops();
 
         potatoSpawnTimer = window.setInterval(spawnPotato, POTATO_SPAWN_INTERVAL);
@@ -1739,6 +1826,9 @@ document.addEventListener('DOMContentLoaded', () => {
         worldMap.classList.remove('hidden');
         cafeWorldContainer.classList.add('hidden');
         personContainer.classList.remove('hidden');
+        hideCafeRibbon();
+
+        stopCafeBranchLoops();
 
         stopCafeBranchLoops();
 
@@ -2143,6 +2233,17 @@ document.addEventListener('DOMContentLoaded', () => {
     cafeCashStack.addEventListener('click', () => {
         if (!cafeActive) return;
         collectCafeCash();
+    });
+
+    cafeRibbonClose?.addEventListener('click', hideCafeRibbon);
+    cafeRibbonShow?.addEventListener('click', showCafeRibbon);
+
+    cafeOpenTutorialBtn?.addEventListener('click', () => {
+        cafeTutorialOverlay?.classList.remove('hidden');
+    });
+
+    cafeTutorialClose?.addEventListener('click', () => {
+        cafeTutorialOverlay?.classList.add('hidden');
     });
 
     cafeUpgradesBtn.addEventListener('click', () => {
