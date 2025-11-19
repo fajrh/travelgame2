@@ -13,6 +13,8 @@ interface Customer {
   order: DishType;
   createdAt: number;
   angerTimeout: number;
+  banterInterval: number | null;
+  banterEl: HTMLElement;
 }
 
 interface ReadyDish {
@@ -82,46 +84,86 @@ const staffEmojis: Record<keyof StaffState, string> = {
   cleaner: '🧹',
 };
 
-const template = `
-  <div class="hud">
-    <div class="hud-section">
-      <div class="logo-chip">FJ</div>
-      <div class="flag-chip pulse" id="theme-flag">🇺🇸</div>
-    </div>
-    <div class="hud-section">
-      <div class="cash-counter" id="cash-counter"><span>💸</span><span id="cash-value">0</span></div>
-      <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
-    </div>
-    <div class="hud-section">
-      <button class="hud-btn" id="menu-btn" aria-label="menu">⚙️</button>
-      <button class="hud-btn" id="notify-btn" aria-label="notify">🔔</button>
-    </div>
-  </div>
-  <div id="chaos-banner" class="chaos-banner"></div>
-  <div class="world">
-    <div class="lane" id="customers-lane"></div>
-    <div class="lane" id="stations-lane">
-      <div class="station glow" id="station-bin"><div class="emoji">🥔</div></div>
-      <div class="station" id="station-fryer"><div class="emoji">🔥</div></div>
-      <div class="station" id="station-pass">
-        <div class="emoji">📦</div>
-        <div class="ready-stack" id="ready-stack"></div>
+const chatterLines = [
+  'Put the fries in the bag!',
+  'Joshua better see this.',
+  'Crunch mode activated.',
+  'I flew in for these.',
+  'Need meme fuel now!',
+  'My vlog is rolling...',
+];
+
+  const template = `
+    <div class="hud">
+      <div class="hud-section">
+        <div class="logo-chip">FJ</div>
+        <div class="flag-chip pulse" id="theme-flag">🇺🇸</div>
+      </div>
+      <div class="hud-section">
+        <div class="cash-counter" id="cash-counter"><span>💸</span><span id="cash-value">0</span></div>
+        <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
+      </div>
+      <div class="hud-section">
+        <button class="hud-btn" id="menu-btn" aria-label="menu">
+          <span class="btn-icon">⚙️</span>
+          <span class="btn-label small">Menu</span>
+        </button>
+        <button class="hud-btn" id="notify-btn" aria-label="notify">
+          <span class="btn-icon">🔔</span>
+          <span class="btn-label small">Alerts</span>
+        </button>
       </div>
     </div>
-    <div class="lane" id="rewards-lane">
-      <div class="cash-pile" id="cash-pile"></div>
-      <div id="tip-combo">✨ TIP STREAK! ✨</div>
+    <div id="chaos-banner" class="chaos-banner"></div>
+    <div class="world">
+      <div class="lane" id="customers-lane">
+        <div class="lane-tip prompt-chip">Serve memes fast!</div>
+      </div>
+      <div class="lane" id="stations-lane">
+        <div class="station glow" id="station-bin">
+          <div class="emoji">🥔</div>
+          <div class="prompt-chip">Tap potatoes</div>
+        </div>
+        <div class="station" id="station-fryer">
+          <div class="emoji">🔥</div>
+          <div class="prompt-chip">Let them sizzle</div>
+        </div>
+        <div class="station" id="station-pass">
+          <div class="emoji">📦</div>
+          <div class="ready-stack" id="ready-stack"></div>
+          <div class="prompt-chip">Serve the queue</div>
+        </div>
+      </div>
+      <div class="lane" id="rewards-lane">
+        <div class="prompt-chip lane-tip">Grab cash to hire staff</div>
+        <div class="cash-pile" id="cash-pile"></div>
+        <div id="tip-combo">✨ TIP STREAK! ✨</div>
+      </div>
     </div>
-  </div>
-  <div class="bottom-bar">
-    <button class="action-btn" data-action="store">🛒</button>
-    <button class="action-btn" data-action="upgrades">⚡</button>
-    <button class="action-btn" data-action="travel">✈️</button>
-    <button class="action-btn" data-action="staff">👥</button>
-    <button class="action-btn" data-action="stats">📊</button>
-  </div>
-  <div class="modal-sheet" id="action-sheet"></div>
-`;
+    <div class="bottom-bar">
+      <button class="action-btn" data-action="store">
+        <span class="btn-icon">🛒</span>
+        <span class="btn-label">Store</span>
+      </button>
+      <button class="action-btn" data-action="upgrades">
+        <span class="btn-icon">⚡</span>
+        <span class="btn-label">Boost</span>
+      </button>
+      <button class="action-btn" data-action="travel">
+        <span class="btn-icon">✈️</span>
+        <span class="btn-label">Travel</span>
+      </button>
+      <button class="action-btn" data-action="staff">
+        <span class="btn-icon">👥</span>
+        <span class="btn-label">Staff</span>
+      </button>
+      <button class="action-btn" data-action="stats">
+        <span class="btn-icon">📊</span>
+        <span class="btn-label">Stats</span>
+      </button>
+    </div>
+    <div class="modal-sheet" id="action-sheet"></div>
+  `;
 
 class TinySynth {
   private ctx: AudioContext | null;
@@ -223,7 +265,7 @@ function initCafe() {
   function positionArrow() {
     const rect = stationBin.getBoundingClientRect();
     arrow.style.left = `${rect.left + rect.width / 2 - 24}px`;
-    arrow.style.top = `${rect.top - 50}px`;
+    arrow.style.top = `${rect.bottom + 8}px`;
   }
   positionArrow();
   window.addEventListener('resize', positionArrow);
@@ -398,6 +440,7 @@ function initCafe() {
     const item: ReadyDish = { id: dishId++, dish, bornAt: performance.now(), element: card };
     readyDishes.push(item);
     card.addEventListener('pointerdown', () => deliverDish(item));
+    attemptServeQueue();
     if (staffState.runner && !runnerTimer) {
       runnerTimer = window.setTimeout(() => {
         deliverNextAuto();
@@ -416,7 +459,7 @@ function initCafe() {
 
   function deliverDish(item: ReadyDish) {
     const customer = customers.find((c) => c.order === item.dish);
-    if (!customer) return;
+    if (!customer) return false;
     readyDishes = readyDishes.filter((d) => d.id !== item.id);
     item.element.remove();
     const from = getCenter(stationPass);
@@ -437,9 +480,11 @@ function initCafe() {
       { duration: 500, easing: 'ease-out' }
     ).onfinish = () => flyer.remove();
     handleServe(customer, item.dish);
+    return true;
   }
 
   function handleServe(customer: Customer, dish: DishType) {
+    cleanupCustomer(customer);
     createParticles('heart', getCenter(customer.element).x, getCenter(customer.element).y - 20);
     synth.play('serve');
     clearTimeout(customer.angerTimeout);
@@ -467,6 +512,27 @@ function initCafe() {
     const total = Math.round((basePay + tip) * tipBoost);
     spawnCashToken(total, customer.element);
     updateXp(5);
+  }
+
+  function attemptServeQueue() {
+    let served = false;
+    do {
+      served = false;
+      for (const item of readyDishes) {
+        if (deliverDish(item)) {
+          served = true;
+          break;
+        }
+      }
+    } while (served);
+  }
+
+  function cleanupCustomer(customer: Customer) {
+    if (customer.banterInterval) {
+      window.clearInterval(customer.banterInterval);
+      customer.banterInterval = null;
+    }
+    customer.banterEl.classList.remove('show');
   }
 
   function spawnCashToken(amount: number, origin: HTMLElement) {
@@ -522,13 +588,33 @@ function initCafe() {
     const fill = document.createElement('div');
     fill.className = 'patience-fill';
     patience.appendChild(fill);
+    const banter = document.createElement('div');
+    banter.className = 'banter-bubble';
+    banter.textContent = chatterLines[Math.floor(Math.random() * chatterLines.length)];
     card.appendChild(bubble);
     card.appendChild(avatar);
     card.appendChild(patience);
+    card.appendChild(banter);
     customersLane.appendChild(card);
     const id = customerId++;
     const patienceMs = 15000;
     const createdAt = performance.now();
+    const customer: Customer = {
+      id,
+      element: card,
+      patienceFill: fill,
+      order,
+      createdAt,
+      angerTimeout: 0,
+      banterInterval: null,
+      banterEl: banter,
+    };
+    const speak = () => {
+      banter.textContent = chatterLines[Math.floor(Math.random() * chatterLines.length)];
+      banter.classList.add('show');
+      setTimeout(() => banter.classList.remove('show'), 1800);
+    };
+    const shouldChat = Math.random() > 0.25;
     const angerTimeout = window.setTimeout(() => {
       card.classList.add('angry');
       card.animate(
@@ -538,10 +624,15 @@ function initCafe() {
         ],
         { duration: 600, easing: 'ease-in' }
       ).onfinish = () => card.remove();
+      cleanupCustomer(customer);
       customers = customers.filter((c) => c.id !== id);
     }, patienceMs);
-    const customer: Customer = { id, element: card, patienceFill: fill, order, createdAt, angerTimeout };
+    customer.angerTimeout = angerTimeout;
     customers.push(customer);
+    if (shouldChat) {
+      setTimeout(() => speak(), 1200 + Math.random() * 1800);
+      customer.banterInterval = window.setInterval(() => speak(), 5000 + Math.random() * 3500);
+    }
     function tickPatience() {
       const elapsed = performance.now() - createdAt;
       const ratio = Math.max(0, 1 - elapsed / patienceMs);
@@ -551,6 +642,7 @@ function initCafe() {
       }
     }
     tickPatience();
+    attemptServeQueue();
   }
 
   function scheduleCustomers() {
