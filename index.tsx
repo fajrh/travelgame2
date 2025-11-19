@@ -768,15 +768,7 @@ function initCafe() {
     } else {
       window.setTimeout(() => {
         if (!collected) {
-          token
-            .animate(
-              [
-                { opacity: 1, transform: token.style.transform },
-                { opacity: 0, transform: `${token.style.transform} scale(0.7)` },
-              ],
-              { duration: 400, easing: 'ease-out' }
-            )
-            .onfinish = () => token.remove();
+          collect();
         }
       }, 6000);
     }

@@ -380,8 +380,15 @@
       #ambient-layer {
         position: absolute;
         inset: 0;
-        pointer-events: none;
         overflow: visible;
+      }
+
+      #effects-layer {
+        pointer-events: auto;
+      }
+
+      #ambient-layer {
+        pointer-events: none;
       }
 
       .emoji-bubble {
@@ -660,7 +667,6 @@
           grid-template-columns: 1fr;
           grid-auto-rows: minmax(220px, auto);
         }
-      }
 
         #stations-lane {
           gap: 12px;
