@@ -279,7 +279,9 @@ const chatterLines = [
         </div>
       </div>
       <div class="lane" id="rewards-lane">
-        <div class="prompt-chip lane-tip">Serve orders to earn cash, then grab the pile to hire staff</div>
+        <div class="prompt-chip lane-tip">
+          1️⃣ Tap 🥔 &nbsp; 2️⃣ Wait at 🔥 &nbsp; 3️⃣ Tap 🍟 to earn 💸
+        </div>
         <div class="cash-pile" id="cash-pile"></div>
         <div id="tip-combo">✨ TIP STREAK! ✨</div>
       </div>
@@ -615,6 +617,7 @@ function initCafe() {
     };
     readyDishes.push(item);
     card.addEventListener('pointerdown', () => {
+      // First tap: mark as bagged (visual feedback)
       if (!item.bagged) {
         item.bagged = true;
         card.classList.add('bagged');
@@ -627,8 +630,20 @@ function initCafe() {
           { duration: 220, easing: 'ease-out' }
         );
         synth.play('pop');
-      } else {
-        deliverDish(item);
+      }
+
+      // Every tap tries to serve someone
+      const served = deliverDish(item);
+      if (!served) {
+        card.animate(
+          [
+            { transform: 'translateX(0)' },
+            { transform: 'translateX(-4px)' },
+            { transform: 'translateX(4px)' },
+            { transform: 'translateX(0)' },
+          ],
+          { duration: 150 }
+        );
       }
     });
     if (staffState.runner && !runnerTimer) {
@@ -649,8 +664,13 @@ function initCafe() {
   }
 
   function deliverDish(item: ReadyDish) {
-    const customer = customers.find((c) => c.order === item.dish);
-    if (!customer) return false;
+    if (!customers.length) return false;
+
+    // Prefer a customer who ordered this dish, otherwise serve the first
+    let customer = customers.find((c) => c.order === item.dish);
+    if (!customer) {
+      customer = customers[0];
+    }
     readyDishes = readyDishes.filter((d) => d.id !== item.id);
     item.element.remove();
     const from = getCenter(stationPass);
