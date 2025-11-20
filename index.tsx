@@ -279,7 +279,7 @@ const chatterLines = [
         </div>
       </div>
       <div class="lane" id="rewards-lane">
-        <div class="prompt-chip lane-tip">Grab cash to hire staff</div>
+        <div class="prompt-chip lane-tip">Serve orders to earn cash, then grab the pile to hire staff</div>
         <div class="cash-pile" id="cash-pile"></div>
         <div id="tip-combo">✨ TIP STREAK! ✨</div>
       </div>
@@ -763,6 +763,7 @@ function initCafe() {
       synth.play('cash');
     };
     token.addEventListener('pointerdown', collect);
+    window.setTimeout(collect, 80);
     if (staffState.runner) {
       window.setTimeout(collect, 700);
     } else {
