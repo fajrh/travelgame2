@@ -384,7 +384,7 @@
       }
 
       #effects-layer {
-        pointer-events: auto;
+        pointer-events: none;
       }
 
       #ambient-layer {
@@ -404,6 +404,7 @@
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
         pointer-events: auto;
         transition: transform 0.1s ease;
+        z-index: 7;
       }
 
       .emoji-bubble:active {

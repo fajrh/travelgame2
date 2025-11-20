@@ -739,7 +739,7 @@ function initCafe() {
     token.className = 'emoji-bubble collectible';
     token.textContent = '💵';
     token.style.transform = `translate(${start.x - 26}px, ${start.y - 26}px)`;
-    effectsLayer.appendChild(token);
+    root.appendChild(token);
     let collected = false;
     const collect = () => {
       if (collected) return;
