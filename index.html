@@ -1,1887 +1,689 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Game</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Almendra&family=Amiri&family=Cinzel&family=Great+Vibes&family=Lobster&family=Meie+Script&family=Noto+Nastaliq+Urdu&family=Oswald&family=Parisienne&family=Playfair+Display&family=Poppins&family=Sriracha&family=Ubuntu&family=Yuji+Syuku&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Nunito+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fajr's Café – Fries In The Bag</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Space+Grotesk:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        :root {
-            --cafe-bg: #4a3b2a;
-            --station-bg: #7a6349;
-            --station-border: #a0825f;
-            --text-light: #f5eadd;
-            --accent-green: #5cb85c;
-            --accent-blue: #4e9de0;
-        }
-        
-        body {
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-color: #111;
-            margin: 0;
-            overflow: hidden; /* Hide scrollbars */
-            cursor: pointer;
-            color: white;
-            font-family: 'Inter', 'Poppins', sans-serif;
-            user-select: none; /* Prevent text selection */
-            transition: background-color 1s ease-in-out;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: -1;
-        }
-
-        body::after { /* For background image transition */
-            content: '';
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background-image: url('https://cdn.stocksnap.io/img-thumbs/960w/highway-road_QRMU7J5UWN.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            z-index: -2; /* Behind the overlay */
-            opacity: 1;
-            transition: opacity 1s ease-in-out;
-        }
-
-        body.away::after {
-            opacity: 0;
-        }
-        
-        #world-map.hidden > * {
-            display: none;
-        }
-
-        #home-compass {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            width: 300px;
-            height: 300px;
-            transform: translate(-50%, -50%);
-            background-image: url('https://svgsilh.com/svg/309123.svg');
-            background-size: contain;
-            background-repeat: no-repeat;
-            opacity: 0.1;
-            z-index: 0;
-            pointer-events: none;
-        }
-        
-        #score-container {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 105; /* Above cafe view */
-            display: flex;
-            align-items: baseline;
-            gap: 6px;
-        }
-
-        #score {
-            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-            font-size: 36px;
-            font-weight: bold;
-            color: yellow;
-            text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000;
-        }
-
-        #version-number {
-            font-family: Arial, sans-serif;
-            font-size: 5pt;
-            color: white;
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
-        }
-
-        #city-title {
-            position: absolute;
-            top: 70px; /* Below the score */
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 36px;
-            font-weight: bold;
-            text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff0, 0 0 30px #ff0;
-            z-index: 15;
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
-            background-image: var(--flag-gradient);
-            display: none; /* Hidden by default */
-        }
-
-        #person-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 50px;
-            height: auto;
-            text-align: center;
-            will-change: transform;
-            z-index: 5;
-            overflow: visible;
-        }
-        
-        #person-emoji {
-            font-size: 40px; /* Slightly smaller */
-            line-height: 40px;
-            width: 100px; /* Allow space for luggage */
-            text-align: center;
-            transition: transform 0.2s ease;
-        }
-
-        #person-label {
-            font-size: 12px;
-            color: yellow;
-            text-shadow: 1px 1px 2px #000;
-        }
-
-        #passport-office-container, #airport-container, #mf-group-container, #luggage-container, #restaurant-container, #gift-shop-container, #settings-container {
-            position: absolute;
-            text-align: center;
-            z-index: 2;
-            transition: transform 0.2s ease-in-out;
-            cursor: pointer;
-        }
-        
-        #passport-office-container:hover, #airport-container:hover, #mf-group-container:hover {
-            transform: scale(1.1);
-        }
-        
-        #luggage-container {
-            will-change: transform;
-        }
-
-        #luggage-container:hover, #settings-container:hover {
-            transform: scale(1.1);
-            text-shadow: 0 0 10px gold, 0 0 15px gold;
-        }
-
-
-        #passport-office-container {
-            top: 20px;
-            left: 20px;
-        }
-
-        #restaurant-container {
-            top: 20px;
-            left: 20px;
-        }
-
-        #gift-shop-container {
-            top: 140px;
-            left: 20px;
-        }
-
-        #airport-container {
-            top: 20px;
-            right: 20px;
-        }
-
-        #mf-group-container {
-            bottom: 20px;
-            right: 20px;
-        }
-
-        #home-bottom-left-controls {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            z-index: 40;
-        }
-
-        #luggage-container, #settings-container {
-            font-size: 40px;
-            position: relative;
-            transition: all 0.2s ease-in-out;
-        }
-
-        #passport-office-img, #airport-img, #mf-group-img {
-            width: 150px;
-            height: 150px;
-            border: 4px solid gold;
-            border-radius: 8px;
-            object-fit: cover;
-            cursor: pointer;
-            background-color: #f0f0f0;
-        }
-        
-        #away-airport-placeholder {
-            position: fixed;
-            top: clamp(12px, 6vh, 64px);
-            right: clamp(12px, 6vw, 56px);
-            z-index: 80;
-        }
-
-        #away-airport-placeholder.has-thumbnail {
-            width: 150px;
-            height: 150px;
-            border: 4px solid gold;
-            border-radius: 8px;
-            background-size: cover;
-            background-position: center;
-            padding: 0;
-            min-width: 0;
-            color: transparent;
-            transition: transform 0.2s ease-in-out;
-        }
-        #away-airport-placeholder.has-thumbnail:hover {
-            transform: scale(1.1);
-        }
-        .return-home-text {
-            /* Accessible hidden text */
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border-width: 0;
-        }
-
-        #away-airport-placeholder.has-thumbnail:before,
-        #away-airport-placeholder.has-thumbnail:after {
-            display: none; /* Hide the glowing border and background from .button-85 */
-        }
-
-        .return-home-button {
-            padding: 0.65em 1.4em;
-            font-size: 16px;
-            letter-spacing: 0.02em;
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border: 1px solid rgba(255, 255, 255, 0.32);
-            box-shadow: 0 12px 28px rgba(8, 10, 24, 0.45);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5em;
-            background: linear-gradient(145deg, rgba(24, 18, 60, 0.92), rgba(64, 42, 120, 0.88));
-            color: #f6f2ff;
-            text-shadow: none;
-            min-width: 180px;
-            white-space: nowrap;
-        }
-
-        .return-home-button:before {
-            opacity: 0.55;
-        }
-
-        .return-home-button:after {
-            background: rgba(11, 9, 38, 0.78);
-        }
-        
-        .location-label {
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 5px;
-            color: yellow;
-            text-shadow: 1px 1px 2px #000;
-        }
-
-        .dialog-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            z-index: 10;
-            background-color: rgba(230, 230, 250, 0.95); /* Lavender background */
-            color: #333;
-            padding: 25px;
-            border-radius: 15px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border: 2px solid #9370db; /* Medium Purple Border */
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            box-sizing: border-box;
-            max-width: min(90vw, 480px);
-            width: min(90vw, 480px);
-        }
-        
-        .dialog-container h3 {
-            color: #483d8b; /* Dark Slate Blue */
-            margin-bottom: 15px;
-            font-size: 24px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        #officer-emoji, #success-emoji {
-            font-size: 60px;
-        }
-
-        #speech-bubble, #success-text {
-            margin-top: 15px;
-            background: #fff;
-            color: #000;
-            padding: 10px 15px;
-            border-radius: 10px;
-            position: relative;
-            font-size: 16px;
-            font-weight: bold;
-            max-width: 200px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        #speech-bubble::before {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 0 10px 10px 10px;
-            border-style: solid;
-            border-color: transparent transparent #fff transparent;
-        }
-
-        .action-button {
-            background-color: #9370db; /* Medium Purple */
-            color: yellow;
-            border: none;
-            padding: 12px 22px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .action-button:hover:not(:disabled) {
-            background-color: #8a2be2; /* Blue Violet */
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        }
-
-        .action-button:disabled {
-            background-color: #aaa;
-            color: #666;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        #flights-dialog {
-            background-color: rgba(10, 10, 10, 0.98);
-            border: 2px solid #333;
-            width: 320px; /* Slightly wider for smaller buttons */
-        }
-        #flights-dialog h3 {
-            color: #FF7E31;
-        }
-        #flights-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px; /* Tighter gap */
-            padding: 10px;
-            width: 100%;
-        }
-        
-        .button-42 .visited-checkmark, .gift-item .visited-checkmark {
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            font-size: 18px;
-        }
-        
-        /* Plane Animation & Other Animations */
-        #plane-animation { 
-            font-size: 100px; 
-            cursor: pointer;
-            background-color: transparent;
-            border: none;
-            box-shadow: none;
-        }
-        #flight-animation-wrapper { position: relative; width: 250px; height: 150px; display: flex; align-items: center; justify-content: center; }
-        #globe-emoji { font-size: 100px; }
-        #plane-emoji-anim { position: absolute; font-size: 50px; animation: fly-across-screen 3s ease-in-out forwards; }
-        @keyframes fly-across-screen { 
-            0% { transform: translate(-150px, 80px) rotate(-30deg) scale(0.7); opacity: 0; } 
-            15% { transform: translate(-70px, -20px) rotate(15deg) scale(1); opacity: 1; } 
-            50% { transform: translate(0, -60px) rotate(15deg) scale(1.1); } 
-            85% { transform: translate(70px, -20px) rotate(15deg) scale(1); opacity: 1; } 
-            100% { transform: translate(150px, 80px) rotate(50deg) scale(0.7); opacity: 0; } 
-        }
-
-        #passport-celebration { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: none; align-items: center; justify-content: center; z-index: 20; background: rgba(0,0,0,0.7); }
-        #passport-celebration.active { display: flex; }
-        #celebration-passport-emoji { font-size: 150px; animation: passport-fade 2.5s ease-in-out forwards; }
-        @keyframes passport-fade { 0%, 100% { opacity: 0; transform: scale(0.5); } 20%, 80% { opacity: 1; transform: scale(1); } }
-        .sparkle { position: absolute; width: 8px; height: 8px; background: white; border-radius: 50%; pointer-events: none; animation: sparkle-anim 1s ease-out forwards; opacity: 0; }
-        @keyframes sparkle-anim { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; } }
-        #visa-animation-container { position: relative; width: 200px; height: 150px; display: flex; justify-content: center; align-items: center; }
-        #visa-passport-emoji { font-size: 120px; color: #7a9cff; }
-        #visa-sticker-emoji { position: absolute; font-size: 60px; opacity: 0; transform: scale(3); animation: stamp-visa 1s cubic-bezier(0.18, 0.89, 0.32, 1.28) 0.5s forwards; }
-        @keyframes stamp-visa { to { opacity: 1; transform: scale(1) rotate(-15deg); } }
-        
-        .city-image-container {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1;
-        }
-        .city-image-container img {
-            width: 640px;
-            height: 480px;
-            max-width: 90vw;
-            max-height: 60vh;
-            object-fit: cover;
-            border-radius: 12px;
-            border: 3px solid #9370db;
-        }
-
-        #restaurant-view-container {
-            position: relative;
-            padding: 15px;
-            background-color: rgba(230, 230, 250, 0.95);
-            border: 3px solid #9370db;
-        }
-        #restaurant-image {
-            width: 560px;
-            height: 370px;
-            max-width: 90vw;
-            max-height: 80vh;
-            border-radius: 8px;
-            object-fit: cover;
-        }
-        #exit-dialog-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            font-size: 16px;
-            font-family: sans-serif;
-            font-weight: bold;
-            color: yellow;
-            background: #9370db;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            border: 2px solid white;
-            z-index: 21;
-        }
-        #exit-dialog-btn:hover { background: #8a2be2; }
-        
-        #caption-container {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            text-align: center;
-            font-family: 'Lucida Console', monospace;
-            font-size: 12pt;
-            color: #39ff14;
-            text-shadow: 0 0 5px #39ff14;
-            z-index: 25;
-            pointer-events: none;
-            min-height: 20px;
-        }
-        
-        #city-emojis {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            gap: 15px;
-            z-index: 15;
-            padding: 10px;
-            background-color: rgba(0,0,0,0.5);
-            border-radius: 20px;
-        }
-        #city-emojis span {
-            font-size: 32px;
-            width: 32px;
-            height: 32px;
-            line-height: 32px;
-            text-align: center;
-        }
-        
-        #visited-cities-list {
-            position: absolute;
-            top: 250px; /* Shifted down */
-            background: rgba(0,0,0,0.6);
-            padding: 10px 15px;
-            border-radius: 10px;
-            border: 1px solid #444;
-            z-index: 10;
-            left: 20px; 
-        }
-        #visited-cities-list h3 { margin: 0 0 10px 0; font-size: 16px; color: #9370db; text-align: center; }
-        #visited-cities-list ul { list-style: none; padding: 0; margin: 0; }
-        #visited-cities-list li { font-size: 14px; margin-bottom: 5px; color: #ccc; }
-        #visited-cities-list li::before { content: '✅ '; }
-
-        .souvenir-item { font-size: 14px; margin-bottom: 5px; color: #333; }
-
-
-        #gift-shop-items-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .elegant-title {
-            font-family: 'Bookman Old Style', serif;
-            font-size: 44px;
-            color: #ffebcd; /* Blanched Almond */
-            text-shadow: 1px 1px 3px #8a2be2;
-            margin: 0 0 10px 0;
-            text-align: center;
-        }
-        
-        .green-felt-bg {
-             background-color: #013220; /* Dark Green fallback */
-            background-image: url('https://www.transparenttextures.com/patterns/green-fibers.png');
-            border-color: #006400; /* Darker Green */
-        }
-        .green-felt-bg h3, .green-felt-bg p {
-            color: #F0E68C; /* Khaki */
-            text-shadow: 1px 1px 3px black;
-         }
-         .green-felt-bg .elegant-title {
-             color: #F0E68C;
-         }
-         .green-felt-bg .button-5 {
-            background-color: #006400;
-         }
-         .green-felt-bg .button-5:hover {
-            background-color: #008000;
-         }
-
-        .red-felt-bg {
-            background-color: #8B0000; /* DarkRed */
-            background-image: url('https://www.transparenttextures.com/patterns/felt.png');
-            border-color: #660000; /* Darker Red */
-        }
-        .red-felt-bg h3 {
-            color: #FFD700; /* Gold */
-            text-shadow: 1px 1px 2px black;
-        }
-        .red-felt-bg .action-button {
-            background-color: #660000;
-            border: 1px solid #FFD700;
-            color: #FFD700;
-        }
-
-        /* Minigame Styles */
-        #minigame-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            border: 1px solid rgba(240, 230, 140, 0.45);
-            border-radius: 14px;
-            padding: 16px 18px 18px;
-            width: min(320px, 90vw);
-            background: rgba(0, 0, 0, 0.35);
-            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.4);
-        }
-        #minigame-header {
-            text-align: center;
-            width: 100%;
-        }
-        #minigame-header p {
-            margin: 0;
-            font-size: 0.92rem;
-            color: #F8F0C6;
-            opacity: 0.92;
-        }
-        #minigame-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            min-height: 140px;
-            gap: 12px;
-        }
-        #fries-container {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(70px, 1fr));
-            gap: 10px;
-            justify-items: center;
-            width: 100%;
-            flex: 1;
-        }
-        .fry {
-            --tx: 0px;
-            --ty: 0px;
-            --scale: 1;
-            font-size: 36px;
-            cursor: grab;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            line-height: 1;
-            transition: transform 0.18s ease, opacity 0.22s ease;
-            transform: translate(var(--tx), var(--ty)) scale(var(--scale));
-            touch-action: none;
-        }
-        .fry:hover { --scale: 1.08; }
-        .fry.is-dragging {
-            opacity: 0.85;
-            cursor: grabbing;
-            --scale: 1.1;
-        }
-        .fry.fry--spawning {
-            opacity: 0;
-            --scale: 0.85;
-        }
-        .food-label {
-            font-family: Arial, sans-serif;
-            font-size: 10px;
-            color: #F0E68C;
-            margin-top: 2px;
-            text-shadow: 1px 1px 1px black;
-        }
-        #bag-dropzone {
-            font-size: 68px;
-            padding: 16px;
-            border-radius: 18px;
-            transition: transform 0.2s ease, background-color 0.2s ease;
-            background: rgba(0, 0, 0, 0.25);
-            box-shadow: 0 0 0 2px rgba(240, 230, 140, 0.25);
-            flex-shrink: 0;
-        }
-        #bag-dropzone.over {
-            transform: scale(1.08);
-            background-color: rgba(255, 255, 0, 0.18);
-        }
-        #minigame-title:empty { display: none; }
-        
-        /* Staff & Menu Dialogs */
-        #staff-controls, #settings-controls, #minigames-controls { display: flex; gap: 15px; }
-        
-        #minigame-dialog {
-             background-color: #013220; /* Dark Green fallback */
-            background-image: url('https://www.transparenttextures.com/patterns/green-fibers.png');
-            border-color: #006400; /* Darker Green */
-        }
-         #minigame-dialog .elegant-title {
-            color: #F0E68C; /* Khaki */
-            text-shadow: 1px 1px 3px black;
-         }
-         #minigame-dialog p {
-             color: #F0E68C; /* Khaki */
-         }
-
-
-        /* Worker Automation */
-        #worker-animation-container {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 280px;
-            height: auto;
-            background: black;
-            border: 2px solid #9370db;
-            border-bottom: none;
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            z-index: 10;
-            padding: 5px;
-        }
-        #worker-animation-container .elegant-title {
-            font-size: 32px;
-            margin-bottom: 0;
-            font-weight: normal;
-        }
-        #worker-animation-row {
-            position: relative;
-            width: 100%;
-            height: 50px;
-        }
-        #worker-animation-row > span {
-            position: absolute;
-            font-size: 30px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        #worker-anim-chef { left: 10px; }
-        #worker-anim-bag { right: 10px; }
-        .worker-anim-item {
-            font-size: 30px;
-            position: absolute;
-        }
-        #worker-anim-food {
-            opacity: 0;
-            animation: move-food 4s linear forwards;
-        }
-        @keyframes move-food {
-            0% { opacity: 1; transform: translate(50px, -50%) scale(1); }
-            80% { opacity: 1; transform: translate(180px, -50%) scale(1); }
-            100% { opacity: 0; transform: translate(180px, -50%) scale(0.5); }
-        }
-
-        /* Earning Toast */
-        #toast-container {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            display: flex;
-            flex-direction: column-reverse;
-            align-items: center;
-            gap: 5px;
-            pointer-events: none;
-        }
-        .toast {
-            background: transparent;
-            color: limegreen;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            text-shadow: 0 0 5px black, 0 0 3px black;
-            animation: fade-in-out 3s ease-in-out forwards;
-        }
-        @keyframes fade-in-out {
-            0% { opacity: 0; transform: translateY(20px); }
-            20% { opacity: 1; transform: translateY(0); }
-            80% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
-        }
-        
-        /* Recipe Celebration & Win Celebration */
-        #recipe-celebration, #memory-game-win-celebration {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.6);
-            pointer-events: none;
-            overflow: hidden;
-        }
-        .celebration-text {
-            font-size: 48px;
-            font-weight: bold;
-            color: yellow;
-            text-align: center;
-            text-shadow: 0 0 10px #ff8c00, 0 0 20px #ff8c00, 2px 2px 5px black;
-            z-index: 51;
-            animation: text-pop-in 3.5s ease-out forwards;
-        }
-        @keyframes text-pop-in {
-            0% { transform: scale(0.5); opacity: 0; }
-            20% { transform: scale(1.1); opacity: 1; }
-            40% { transform: scale(1); opacity: 1; }
-            80% { opacity: 1; }
-            100% { opacity: 0; transform: scale(1); }
-        }
-        .firework {
-            position: absolute;
-            width: 5px; height: 5px;
-            border-radius: 50%;
-            pointer-events: none;
-            opacity: 0;
-            animation: firework-anim 1.5s ease-out forwards;
-        }
-        @keyframes firework-anim {
-            0% { transform: scale(0.5) translate(0, 0); opacity: 1; }
-            100% { transform: scale(1.2) translate(var(--tx), var(--ty)); opacity: 0; }
-        }
-
-        /* NEW Button Style 85 */
-        .button-85 {
-            padding: 0.6em 2em;
-            border: none;
-            outline: none;
-            color: rgb(255, 255, 255);
-            background: #111;
-            cursor: pointer;
-            position: relative;
-            z-index: 0;
-            border-radius: 10px;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            font-weight: bold;
-            font-style: normal;
-        }
-
-        .button-85:before {
-            content: "";
-            background: linear-gradient(
-                45deg,
-                #ff0000,
-                #ff7300,
-                #fffb00,
-                #48ff00,
-                #00ffd5,
-                #002bff,
-                #7a00ff,
-                #ff00c8,
-                #ff0000
-            );
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            background-size: 400%;
-            z-index: -1;
-            filter: blur(5px);
-            -webkit-filter: blur(5px);
-            width: calc(100% + 4px);
-            height: calc(100% + 4px);
-            animation: glowing-button-85 20s linear infinite;
-            transition: opacity 0.3s ease-in-out;
-            border-radius: 10px;
-        }
-
-        @keyframes glowing-button-85 {
-            0% { background-position: 0 0; }
-            50% { background-position: 400% 0; }
-            100% { background-position: 0 0; }
-        }
-
-        .button-85:after {
-            z-index: -1;
-            content: "";
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: #222;
-            left: 0;
-            top: 0;
-            border-radius: 10px;
-        }
-        
-        /* NEW Button Style 5 */
-        .button-5 {
-            align-items: center;
-            background-clip: padding-box;
-            background-color: #fa6400;
-            border: 1px solid transparent;
-            border-radius: .25rem;
-            box-shadow: rgba(0, 0, 0, 0.02) 0 1px 3px 0;
-            box-sizing: border-box;
-            color: #fff;
-            cursor: pointer;
-            display: inline-flex;
-            font-family: system-ui,-apple-system,system-ui,"Helvetica Neue",Helvetica,Arial,sans-serif;
-            font-size: 16px;
-            font-weight: 600;
-            justify-content: center;
-            line-height: 1.25;
-            margin: 0;
-            min-height: 3rem;
-            padding: calc(.875rem - 1px) calc(1.5rem - 1px);
-            position: relative;
-            text-decoration: none;
-            transition: all 250ms;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            vertical-align: baseline;
-            width: auto;
-        }
-
-        .button-5:hover:not(:disabled),
-        .button-5:focus:not(:disabled) {
-            background-color: #fb8332;
-            box-shadow: rgba(0, 0, 0, 0.1) 0 4px 12px;
-        }
-
-        .button-5:hover:not(:disabled) {
-            transform: translateY(-1px);
-        }
-
-        .button-5:active:not(:disabled) {
-            background-color: #c85000;
-            box-shadow: rgba(0, 0, 0, .06) 0 2px 4px;
-            transform: translateY(0);
-        }
-        .button-5:disabled {
-            background-color: #666;
-            color: #ccc;
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        /* NEW Button Style 14 (Gift Shop) */
-        .button-14 {
-            background-image: linear-gradient(#f7f8fa ,#e7e9ec);
-            border-color: #adb1b8 #a2a6ac #8d9096;
-            border-style: solid;
-            border-width: 1px;
-            border-radius: 3px;
-            box-shadow: rgba(255,255,255,.6) 0 1px 0 inset;
-            box-sizing: border-box;
-            color: #0f1111;
-            cursor: pointer;
-            display: inline-block;
-            font-family: "Amazon Ember",Arial,sans-serif;
-            font-size: 14px;
-            height: auto;
-            min-height: 29px;
-            line-height: 1.4;
-            outline: 0;
-            overflow: hidden;
-            padding: 5px 11px;
-            text-align: center;
-            text-decoration: none;
-            text-overflow: ellipsis;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            white-space: normal; /* Allow text wrapping */
-        }
-
-        .button-14:active { border-bottom-color: #a2a6ac; }
-        .button-14:active:hover { border-bottom-color: #a2a6ac; }
-        .button-14:hover { border-color: #a2a6ac #979aa1 #82858a; }
-        .button-14:focus { border-color: #e77600; box-shadow: rgba(228, 121, 17, .5) 0 0 3px 2px; outline: 0; }
-        .button-14:disabled { background-image: linear-gradient(#e7e9ec, #e7e9ec); color: #888; cursor: not-allowed; }
-
-        /* NEW Button Style 42 (Flights) */
-        .button-42 {
-            background-color: initial;
-            border-radius: 6px;
-            box-shadow: rgba(0, 0, 0, 0.1) 0 2px 4px;
-            color: #FFFFFF;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-family: Inter,-apple-system,system-ui,Roboto,"Helvetica Neue",Arial,sans-serif;
-            height: 32px; /* Reduced height */
-            line-height: 32px; /* Match height */
-            font-size: 13px; /* Smaller font */
-            outline: 0;
-            overflow: hidden;
-            padding: 0 10px; /* Adjusted padding */
-            pointer-events: auto;
-            position: relative;
-            text-align: left;
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
-            vertical-align: top;
-            white-space: nowrap;
-            width: 100%;
-            z-index: 9;
-            border: 0;
-            transition: box-shadow .2s, background-image 0.3s;
-        }
-        .flight-city-name {
-            flex-grow: 1;
-        }
-        .flight-flag {
-            font-size: 16px;
-        }
-        .flight-cost {
-            font-weight: normal;
-            font-size: 0.9em;
-        }
-        
-        .button-42.affordable {
-             background-image: linear-gradient(-180deg, #42f560, #00b321);
-        }
-        .button-42.unaffordable {
-             background-image: linear-gradient(-180deg, #f54242, #b30000);
-        }
-        
-        .button-42.affordable:hover {
-            box-shadow: rgba(66, 245, 96, 0.5) 0 3px 8px;
-        }
-        .button-42.unaffordable:hover {
-            box-shadow: rgba(245, 66, 66, 0.5) 0 3px 8px;
-        }
-
-        .button-42:disabled {
-            background-image: linear-gradient(-180deg, #999, #777);
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-        .button-42 strong { font-size: 16px; margin-bottom: 5px; display: block; }
-
-
-        /* Settings Dialog */
-        #settings-dialog {
-            width: min(90vw, 420px);
-        }
-
-        #settings-dialog .settings-row {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        #settings-dialog label,
-        #settings-dialog .settings-heading {
-            font-weight: bold;
-            color: #483d8b;
-            text-align: center;
-        }
-        #settings-dialog input {
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            width: 200px;
-            text-align: center;
-        }
-        #settings-dialog .button-5 {
-            font-size: 24px;
-            padding: 10px;
-            min-height: auto;
-        }
-
-        #player-emoji-options {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            max-width: 220px;
-            justify-content: center;
-        }
-
-        .emoji-option-button {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            border: 2px solid transparent;
-            background: rgba(255, 255, 255, 0.8);
-            font-size: 26px;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-            cursor: pointer;
-        }
-
-        .emoji-option-button:hover,
-        .emoji-option-button:focus-visible {
-            transform: translateY(-2px) scale(1.08);
-            box-shadow: 0 4px 10px rgba(72, 61, 139, 0.3);
-        }
-
-        .emoji-option-button.selected {
-            border-color: #9370db;
-            box-shadow: 0 0 0 3px rgba(147, 112, 219, 0.35);
-        }
-
-        /* NEW: Memory Game Styles */
-        #memory-game-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            perspective: 1000px;
-        }
-        .memory-card {
-            width: 80px;
-            height: 80px;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.6s;
-            cursor: pointer;
-        }
-        .memory-card.is-flipped {
-            transform: rotateY(180deg);
-        }
-        .memory-card-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            font-size: 40px;
-            box-sizing: border-box;
-        }
-        .memory-card-face.card-front {
-            background-color: #8B0000; /* DarkRed */
-            background-image: url('https://www.transparenttextures.com/patterns/felt.png');
-            border: 2px solid gold;
-        }
-        .memory-card-face.card-back {
-            background: #9370db;
-            color: white;
-            transform: rotateY(180deg);
-            flex-direction: column;
-            gap: 2px;
-            padding-bottom: 2px;
-        }
-        .card-back .card-label {
-            font-size: 8pt;
-            font-family: Arial, sans-serif;
-            font-weight: bold;
-            text-shadow: 1px 1px 1px #555;
-        }
-
-
-        /* NEW: Gem Swap Game Styles */
-        #gem-swap-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 40px);
-            grid-template-rows: repeat(8, 40px);
-            gap: 2px;
-            background-color: #002315;
-            padding: 5px;
-            border-radius: 5px;
-        }
-        .gem {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            cursor: pointer;
-            transition: transform 0.2s ease, opacity 0.3s ease;
-        }
-        .gem.selected {
-            transform: scale(1.1);
-            background-color: rgba(255, 255, 0, 0.3);
-            border-radius: 50%;
-        }
-        .gem.matched {
-            animation: gem-pop 0.3s ease forwards;
-        }
-        @keyframes gem-pop {
-            from { transform: scale(1); opacity: 1; }
-            to { transform: scale(0); opacity: 0; }
-        }
-
-        /* Flight Tooltip */
-        #flight-tooltip {
-            position: absolute;
-            background-color: #333;
-            color: white;
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #555;
-            font-size: 12px;
-            z-index: 100;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            line-height: 1.5;
-        }
-        
-        /* NEW: Sparkle Effect for Minigames */
-        .sparkle-effect {
-            position: fixed;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 101; /* Above dialogs */
-            opacity: 0;
-            animation: sparkle-effect-anim 0.8s ease-out forwards;
-        }
-        @keyframes sparkle-effect-anim {
-            0% { transform: scale(0.5); opacity: 1; }
-            100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; }
-        }
-
-        /* Loading Screen */
-        #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: #111;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            transition: opacity 0.5s ease;
-            opacity: 1;
-            pointer-events: none;
-        }
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-
-        /* NEW CAFE-TYCOON STYLES */
-        .cafe-pastel-theme {
-            --cafe-cream: #fff8f2;
-            --cafe-caramel: #f2c492;
-            --cafe-mocha: #6f4e37;
-            --cafe-foam: #f4e9dd;
-            --cafe-mint: #d8f1da;
-            --cafe-rose: #f9d6d2;
-            --cafe-ink: #211915;
-            --cafe-shadow: 0 18px 52px rgba(26, 23, 19, 0.15);
-            --cafe-radius: 18px;
-        }
-        #cafe-world-container {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.12), transparent 25%),
-                        radial-gradient(circle at 80% 10%, rgba(255, 214, 170, 0.15), transparent 25%),
-                        linear-gradient(180deg, #fdf5ec 0%, #f8e7d4 40%, #f2dcc3 100%);
-            color: #1d1a1a;
-            z-index: 100;
-            display: none;
-        }
-        #cafe-world-container:not(.hidden) { display: flex; }
-        #cafe-root {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 16px;
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            font-family: 'Inter', 'Nunito Sans', sans-serif;
-        }
-        .cafe-topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.92);
-            border-radius: 16px;
-            box-shadow: var(--cafe-shadow);
-        }
-        .cafe-branch { font-weight: 800; }
-        .cafe-money { font-weight: 800; font-size: 1.1rem; }
-        .cafe-dish-summary { display: flex; align-items: center; gap: 8px; }
-        .cafe-chip-pill { background: #f0e4d7; color: #3a2b24; padding: 8px 12px; border-radius: 999px; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04); }
-
-        .cafe-steps-banner {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 12px;
-            background: linear-gradient(135deg, #2f2217, #3a2d21);
-            color: #fef7ec;
-            border-radius: 14px;
-            box-shadow: var(--cafe-shadow);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .cafe-steps-banner.show { opacity: 1; }
-        .cafe-ribbon-steps { display: flex; flex-wrap: wrap; gap: 8px; }
-        .cafe-ribbon-step { background: rgba(255,255,255,0.12); padding: 6px 10px; border-radius: 10px; font-weight: 700; }
-        .cafe-ribbon-actions button { border: none; background: #f3d0a6; color: #3b281e; font-weight: 700; padding: 8px 12px; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 14px rgba(0,0,0,0.12); }
-
-        .cafe-lanes {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1.1fr 1.4fr 1.1fr;
-            gap: 12px;
-            min-height: 0;
-        }
-        .lane {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 16px;
-            box-shadow: var(--cafe-shadow);
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            min-height: 0;
-        }
-        .lane-header h3 { margin: 0; }
-        .lane-subtext { color: #5c4c44; font-size: 0.9rem; }
-
-        .order-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; }
-        .order-card { background: linear-gradient(90deg, #fff7ec 0%, #f6ead6 100%); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 8px 10px; display: grid; grid-template-rows: repeat(3, auto); gap: 4px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
-        .order-row-top { display: flex; align-items: center; gap: 6px; font-weight: 700; }
-        .order-row-middle { font-weight: 700; color: #3a2b24; }
-        .order-row-bottom { height: 6px; background: rgba(0,0,0,0.08); border-radius: 6px; overflow: hidden; }
-        .order-row-bottom .fill { height: 100%; background: linear-gradient(90deg, #7ed957, #4caf50); width: 100%; transition: width 0.3s ease; }
-
-        .kitchen-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .station { background: #fdf4e7; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 4px; align-items: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 8px 16px rgba(0,0,0,0.06); cursor: pointer; }
-        .station .station-icon { font-size: 1.8rem; }
-        .station-label { font-weight: 800; }
-        .station-hint { color: #5c4c44; font-size: 0.85rem; }
-        .station:focus { outline: 2px solid var(--cafe-mocha); }
-
-        #kitchen-items-layer, #worker-layer { position: relative; min-height: 90px; overflow: hidden; }
-        .kitchen-item { position: absolute; font-size: 24px; transform: translate(-50%, -50%); transition: transform 0.2s linear; }
-        .flying-token { position: fixed; z-index: 200; font-size: 26px; transition: transform 0.55s ease, opacity 0.55s ease; transform: translate(-50%, -50%) scale(0.8); opacity: 0.95; }
-        .flying-token.fly { transform: translate(calc(var(--tx) - 50%), calc(var(--ty) - 50%)) scale(1.1); opacity: 0; }
-        .station-bubble { position: absolute; right: 10px; top: -6px; background: #fffaf3; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 4px 8px; font-size: 14px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); animation: popIn 0.35s ease forwards; }
-        .stack-item.entering { animation: popIn 0.3s ease; }
-        @keyframes popIn { from { transform: translateY(8px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-        .worker { position: absolute; top: 60%; font-size: 26px; }
-        #worker-runner { animation: runner-loop 4s linear infinite; }
-        @keyframes runner-loop {
-            0% { left: 30%; transform: scaleX(1); }
-            40% { left: 70%; transform: scaleX(1); }
-            50% { left: 70%; transform: scaleX(-1); }
-            90% { left: 30%; transform: scaleX(-1); }
-            100% { left: 30%; transform: scaleX(1); }
-        }
-
-        .carry-status { display: flex; justify-content: space-between; background: #f8eadd; border-radius: 12px; padding: 8px 10px; font-weight: 700; }
-        .carry-counter { position: static; background: transparent; color: #1d1a1a; padding: 0; }
-
-        .pass-window { background: #fff; border: 1px dashed rgba(0,0,0,0.16); border-radius: 12px; padding: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 10px 24px rgba(0,0,0,0.08); }
-        .pass-slots { position: relative; width: 100%; height: 120px; }
-        .stack-label { font-weight: 800; color: #5b4326; }
-        .stack-item { position: absolute; left: 50%; transform: translate(-50%, 0); padding: 6px 12px; background: #fff6d8; border: 2px solid var(--cafe-accent, #8b5a2b); border-radius: 12px; box-shadow: 0 6px 10px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 8px; min-width: 120px; justify-content: center; }
-        .stack-item .plate { font-size: 1.3rem; }
-
-        #cafe-table-area { display: grid; grid-template-rows: auto 1fr auto; gap: 8px; background: rgba(255,255,255,0.86); border-radius: 12px; padding: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 10px 24px rgba(0,0,0,0.1); }
-        #cafe-customer-tables { display: flex; gap: 8px; min-height: 120px; }
-        .cafe-table { flex: 1; background: #ffe9c8; border: 2px dashed rgba(0,0,0,0.12); border-radius: 12px; position: relative; }
-        .seated-customer { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 1.3rem; text-align: center; }
-        .seated-customer .mood { font-size: 1rem; }
-        .seated-customer .dish { font-size: 1.4rem; }
-
-        .cash-stack { background: linear-gradient(135deg, #f5d890, #f0b775); border: none; padding: 12px; border-radius: 12px; font-size: 1.3rem; cursor: pointer; box-shadow: 0 8px 18px rgba(0,0,0,0.12); }
-        .cash-item { position: absolute; left: 50%; transform: translate(-50%, 0); font-size: 1.3rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18)); transition: transform 0.25s ease; }
-        .cash-item.tip { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)); }
-        #cash-label { font-weight: 800; color: #4d3a1e; }
-
-        .cafe-footer { display: flex; justify-content: center; gap: 10px; padding-top: 4px; }
-
-        #cafe-branch-banner { display: none; }
-        @media (max-width: 1024px) {
-            #score-container {
-                top: 12px;
-            }
-            #score {
-                font-size: 28px;
-            }
-            #city-title {
-                top: 54px;
-                font-size: 26px;
-            }
-            #passport-office-img, #airport-img, #mf-group-img {
-                width: 130px;
-                height: 130px;
-            }
-            #passport-office-container {
-                top: clamp(56px, 10vh, 120px);
-                left: clamp(12px, 6vw, 48px);
-            }
-            #airport-container {
-                top: clamp(56px, 10vh, 120px);
-                right: clamp(12px, 6vw, 48px);
-            }
-            #mf-group-container {
-                top: 52vh;
-                right: clamp(12px, 6vw, 48px);
-                left: auto;
-                bottom: auto;
-                transform: translateY(-50%);
-            }
-            #mf-group-container:hover {
-                transform: translateY(-50%) scale(1.05);
-            }
-            #passport-office-container:hover,
-            #airport-container:hover {
-                transform: scale(1.05);
-            }
-            #home-bottom-left-controls {
-                flex-direction: column-reverse;
-                align-items: flex-start;
-                gap: 10px;
-            }
-            #luggage-container, #settings-container {
-                font-size: 34px;
-            }
-            #visited-cities-list {
-                position: absolute; /* Revert to absolute for scene-relative positioning */
-                top: 180px; /* Position below passport office */
-                left: 20px;
-                bottom: auto;
-                transform: none;
-                width: min(150px, 40vw);
-            }
-            #away-airport-placeholder {
-                top: calc(env(safe-area-inset-top, 0px) + 14px);
-                right: clamp(12px, 8vw, 28px);
-            }
-            .return-home-button {
-                font-size: 14px;
-                padding: 0.6em 1.1em;
-                min-width: 160px;
-                gap: 0.45em;
-            }
-            #person-container {
-                transform: translate(-50%, -50%) scale(0.9);
-            }
-            .city-image-container {
-                bottom: calc(32vh + 100px);
-            }
-        }
-
-        @media (max-width: 600px) {
-            .dialog-container {
-                padding: 18px;
-                width: min(92vw, 360px);
-            }
-            .emoji-option-button {
-                width: 40px;
-                height: 40px;
-                font-size: 22px;
-            }
-            #score-container {
-                top: 12px;
-            }
-            #score {
-                font-size: 24px;
-            }
-            #city-title {
-                top: 58px;
-                font-size: 22px;
-            }
-            #passport-office-img, #airport-img, #mf-group-img {
-                width: min(38vw, 110px);
-                height: min(38vw, 110px);
-            }
-            #passport-office-container {
-                top: clamp(48px, 12vh, 100px);
-                left: clamp(10px, 7vw, 36px);
-            }
-            #airport-container {
-                top: clamp(48px, 12vh, 100px);
-                right: clamp(10px, 7vw, 36px);
-            }
-            #mf-group-container {
-                top: 54vh;
-                right: clamp(10px, 7vw, 36px);
-            }
-            #home-bottom-left-controls {
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
-                left: clamp(10px, 7vw, 36px);
-            }
-             #visited-cities-list {
-                top: 160px;
-                width: min(130px, 35vw);
-             }
-            .city-image-container {
-                bottom: calc(34vh + 80px);
-            }
-            .city-image-container img {
-                max-width: 95vw;
-                max-height: 45vh;
-            }
-            #city-emojis {
-                bottom: calc(34vh + 80px);
-            }
-            #toast-container {
-                bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
-            }
-        }
+      :root {
+        --teal: #06c2b1;
+        --cream: #fff9ef;
+        --taxi: #f9c545;
+        --meme-red: #eb3b5a;
+        --shadow-soft: rgba(0, 0, 0, 0.15);
+        --shadow-hard: rgba(0, 0, 0, 0.3);
+        --surface: rgba(30, 30, 30, 0.55);
+        --hud-height: 90px;
+        --action-bar: 120px;
+        --world-padding: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Nunito', 'Space Grotesk', system-ui, sans-serif;
+        background: radial-gradient(circle at top, #201f30, #05030a 60%);
+        color: var(--cream);
+        min-height: 100vh;
+        overflow: hidden;
+        user-select: none;
+      }
+
+      #game-root {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        gap: 12px;
+      }
+
+      .hud {
+        height: var(--hud-height);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        border-radius: 24px;
+        background: linear-gradient(120deg, rgba(6, 194, 177, 0.25), rgba(30, 30, 30, 0.65));
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+      }
+
+      .hud-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo-chip {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--cream);
+        color: #1e1e1e;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        font-weight: 800;
+        box-shadow: inset 0 0 0 4px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.35);
+      }
+
+      .flag-chip {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        font-size: 24px;
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
+        transition: transform 0.4s ease;
+      }
+
+      .flag-chip.pulse {
+        animation: pulse 1.5s infinite;
+      }
+
+      .cash-counter {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+      }
+
+      .xp-bar {
+        width: 220px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+      }
+
+      .xp-fill {
+        height: 100%;
+        width: 10%;
+        border-radius: inherit;
+        background: linear-gradient(120deg, #00ffa3, #06c2b1);
+        box-shadow: 0 0 12px rgba(0, 255, 163, 0.8);
+        transition: width 0.6s ease;
+      }
+
+      .hud-btn {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        border: none;
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--cream);
+        cursor: pointer;
+        box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.35);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        font-size: 18px;
+      }
+
+      .hud-btn:active {
+        transform: scale(0.92);
+      }
+
+      .world {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1.2fr 1.6fr 1fr;
+        gap: 12px;
+        position: relative;
+      }
+
+      .lane {
+        border-radius: 30px;
+        background: rgba(0, 0, 0, 0.25);
+        position: relative;
+        padding: 18px;
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.05);
+        overflow: hidden;
+      }
+
+      .lane::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: inset 0 12px 40px rgba(255, 255, 255, 0.03);
+        pointer-events: none;
+      }
+
+      #customers-lane {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        justify-content: flex-end;
+      }
+
+      .customer {
+        width: 86px;
+        height: 86px;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(8px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        position: relative;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        animation: bob 2s ease-in-out infinite;
+      }
+
+      .customer.angry {
+        animation: shake 0.4s infinite;
+      }
+
+      .order-bubble {
+        position: absolute;
+        top: -24px;
+        background: rgba(0, 0, 0, 0.65);
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 24px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      }
+
+      .patience {
+        width: 60px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.15);
+        overflow: hidden;
+      }
+
+      .patience-fill {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(120deg, #ffb347, #ffcc33);
+        transition: width 0.2s linear;
+      }
+
+      #stations-lane {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+      }
+
+      .station {
+        width: 30%;
+        aspect-ratio: 1 / 1;
+        border-radius: 32px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 2px solid rgba(255, 255, 255, 0.18);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+        cursor: pointer;
+        position: relative;
+      }
+
+      .station.glow {
+        animation: glow 1.3s ease-in-out infinite;
+      }
+
+      .station .emoji {
+        font-size: 46px;
+      }
+
+      .prompt-chip {
+        font-family: Arial, sans-serif;
+        font-size: 10pt;
+        color: #f9c545;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+        letter-spacing: 0.5px;
+        pointer-events: none;
+      }
+
+      .station .prompt-chip {
+        position: absolute;
+        bottom: 10px;
+        text-align: center;
+        width: 100%;
+      }
+
+      .lane-tip {
+        position: absolute;
+        top: 12px;
+        width: 100%;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      #rewards-lane {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      .cash-pile {
+        min-height: 160px;
+        border-radius: 24px;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        position: relative;
+        overflow: visible;
+      }
+
+      .cash-counter-ambient {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      #tip-combo {
+        font-size: 20px;
+        font-weight: 800;
+        color: #00ffae;
+        text-shadow: 0 0 12px rgba(0, 255, 174, 0.8);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .bottom-bar {
+        height: var(--action-bar);
+        border-radius: 32px;
+        background: rgba(0, 0, 0, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 24px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      }
+
+      .chaos-banner {
+        position: absolute;
+        top: 110px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-140px);
+        padding: 14px 32px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(235, 59, 90, 0.95), rgba(255, 204, 80, 0.9));
+        font-weight: 800;
+        letter-spacing: 1px;
+        text-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+        box-shadow: 0 20px 40px rgba(235, 59, 90, 0.45);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.45s ease, transform 0.45s ease;
+        z-index: 6;
+      }
+
+      .chaos-banner.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .action-btn {
+        width: 70px;
+        height: 70px;
+        border-radius: 24px;
+        border: none;
+        background: rgba(255, 255, 255, 0.15);
+        color: var(--cream);
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.25), 0 10px 25px rgba(0, 0, 0, 0.4);
+        transition: transform 0.2s ease;
+        font-size: 18px;
+      }
+
+      .action-btn:active {
+        transform: scale(0.9);
+      }
+
+      .floating-arrow {
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        font-size: 42px;
+        animation: bounce 1.2s infinite;
+        pointer-events: none;
+        text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+
+      #effects-layer,
+      #ambient-layer {
+        position: absolute;
+        inset: 0;
+        overflow: visible;
+      }
+
+      #effects-layer {
+        pointer-events: none;
+      }
+
+      #ambient-layer {
+        pointer-events: none;
+      }
+
+      .emoji-bubble {
+        position: absolute;
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(6px);
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+        pointer-events: auto;
+        transition: transform 0.1s ease;
+        z-index: 7;
+      }
+
+      .emoji-bubble:active {
+        transform: scale(0.88);
+      }
+
+      .collectible {
+        cursor: pointer;
+      }
+
+      #staff-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .staff-avatar {
+        position: absolute;
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.4);
+        display: grid;
+        place-items: center;
+        font-size: 36px;
+        animation: staffLoop 3s infinite;
+        pointer-events: none;
+      }
+
+      .modal-sheet {
+        position: absolute;
+        left: 50%;
+        bottom: 150px;
+        transform: translateX(-50%) translateY(200px);
+        width: min(420px, 90vw);
+        border-radius: 32px;
+        padding: 20px;
+        background: rgba(10, 10, 10, 0.75);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
+        color: var(--cream);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-around;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.35s ease, transform 0.35s ease;
+      }
+
+      .modal-sheet.show {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .btn-icon {
+        font-size: 28px;
+      }
+
+      .btn-label {
+        font-family: Arial, sans-serif;
+        font-size: 10pt;
+        color: #f9c545;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+      }
+
+      .btn-label.small {
+        font-size: 9pt;
+      }
+
+      .banter-bubble {
+        position: absolute;
+        bottom: 6px;
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.55);
+        font-size: 6pt;
+        font-family: 'Nunito', Arial, sans-serif;
+        color: #ffe48a;
+        opacity: 0;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+      }
+
+      .banter-bubble.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .bubble-option {
+        width: 120px;
+        height: 140px;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.08);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 18px;
+        text-align: center;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        transition: transform 0.2s ease;
+      }
+
+      .bubble-option:active {
+        transform: translateY(6px);
+      }
+
+      .bubble-option span {
+        font-size: 34px;
+      }
+
+      .ambient-petal {
+        position: absolute;
+        font-size: 24px;
+        opacity: 0.6;
+        animation: drift 14s linear infinite;
+      }
+
+      .ready-stack {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .ready-dish {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.12);
+        display: grid;
+        place-items: center;
+        font-size: 32px;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+        animation: stackBounce 0.5s ease;
+        cursor: pointer;
+      }
+
+      .ready-dish.bagged {
+        box-shadow: 0 0 0 2px rgba(0, 255, 163, 0.8), 0 8px 20px rgba(0, 0, 0, 0.6);
+        background: rgba(0, 255, 163, 0.16);
+      }
+
+      @keyframes bob {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes glow {
+        0% {
+          box-shadow: 0 0 0 rgba(6, 194, 177, 0.4);
+        }
+        50% {
+          box-shadow: 0 0 30px rgba(6, 194, 177, 0.8);
+        }
+        100% {
+          box-shadow: 0 0 0 rgba(6, 194, 177, 0.4);
+        }
+      }
+
+      @keyframes shake {
+        0% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-4px);
+        }
+        50% {
+          transform: translateX(4px);
+        }
+        75% {
+          transform: translateX(-4px);
+        }
+        100% {
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.12);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @keyframes bounce {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes drift {
+        0% {
+          transform: translateY(-10vh) translateX(0) rotate(0deg);
+          opacity: 0;
+        }
+        20% {
+          opacity: 0.6;
+        }
+        100% {
+          transform: translateY(110vh) translateX(30px) rotate(90deg);
+          opacity: 0;
+        }
+      }
+
+      @keyframes stackBounce {
+        0% {
+          transform: translateY(40px) scale(0.8);
+          opacity: 0;
+        }
+        100% {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+      }
+
+      @keyframes staffLoop {
+        0% {
+          transform: translateX(-10px) translateY(0);
+        }
+        50% {
+          transform: translateX(10px) translateY(-6px);
+        }
+        100% {
+          transform: translateX(-10px) translateY(0);
+        }
+      }
+
+      @media (max-width: 1000px) {
+        .world {
+          grid-template-columns: 1fr;
+          grid-auto-rows: minmax(220px, auto);
+        }
+
+        #stations-lane {
+          gap: 12px;
+        }
+
+        .station {
+          width: 32%;
+          aspect-ratio: auto;
+        }
+      }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "http": "https://aistudiocdn.com/http@^0.0.1-security",
-    "crypto": "https://aistudiocdn.com/crypto@^1.0.1",
-    "events": "https://aistudiocdn.com/events@^3.3.0",
-    "path": "https://aistudiocdn.com/path@^0.12.7",
-    "vite": "https://aistudiocdn.com/vite@^7.2.2",
-    "url": "https://aistudiocdn.com/url@^0.11.4",
-    "fs": "https://aistudiocdn.com/fs@^0.0.1-security",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "dotenv/": "https://aistudiocdn.com/dotenv@^17.2.3/",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.0",
-    "express": "https://aistudiocdn.com/express@^5.1.0"
-  }
-}
-</script>
-</head>
-<body>
-    <div id="loading-screen">
-        <div class="spinner"></div>
-        <p>Loading your adventure...</p>
-    </div>
-
-    <div id="score-container">
-        <div id="score">$0</div>
-        <div id="version-number">v1.2</div>
-    </div>
-    <div id="toast-container"></div>
-    <div id="flight-tooltip"></div>
-    
-    <main id="world-map">
-        <div id="city-title"></div>
-        <div id="home-compass"></div>
-        
-        <div id="visited-cities-list" class="hidden">
-            <h3>Visited</h3>
-            <ul id="visited-list"></ul>
-        </div>
-        
-        <div id="passport-office-container">
-            <img id="passport-office-img" src="https://i.ibb.co/ks0NNSgv/passportoffice.jpg" alt="Passport Office">
-            <div class="location-label">Passport Office</div>
-        </div>
-        
-        <button id="restaurant-container" class="hidden button-85" role="button">Restaurant</button>
-        <button id="gift-shop-container" class="hidden button-85" role="button">🎁 Gift Shop</button>
-
-        <div id="airport-container">
-            <img id="airport-img" src="https://i.ibb.co/GvTXp9Kt/yyz.png" alt="Toronto Pearson Airport">
-            <div id="airport-label" class="location-label">Airport</div>
-        </div>
-        <button id="away-airport-placeholder" class="hidden button-85 return-home-button" role="button"></button>
-
-        <div id="mf-group-container">
-            <img id="mf-group-img" src="https://i.ibb.co/Kj6yG9Wr/cafe.png" alt="My Restaurant">
-            <div class="location-label">Fajr's Café</div>
-        </div>
-
-        <div id="home-bottom-left-controls">
-            <div id="luggage-container">🧳</div>
-            <div id="settings-container">⚙️</div>
-        </div>
-        
-        <div id="city-image-container" class="city-image-container hidden">
-            <img id="city-image" src="" alt="City View">
-        </div>
-
-        <div id="city-emojis"></div>
-        <div id="caption-container"></div>
-
-        <div id="person-container">
-            <div id="person-emoji">🚶</div>
-            <div id="person-label">Person</div>
-        </div>
-
-    </main>
-    
-    <!-- FAJR'S CAFE TYCOON VIEW -->
-    <div id="cafe-world-container" class="hidden cafe-pastel-theme">
-        <div id="cafe-root" class="cafe-screen">
-            <header class="cafe-topbar">
-                <div class="cafe-branch">Fajr's Café · <span id="cafe-city-name">Toronto</span></div>
-                <div class="cafe-money">💵 <span id="cafe-money-value">0</span></div>
-                <div class="cafe-dish-summary">
-                    <span id="cafe-main-dish-emoji">🍟</span>
-                    <span id="cafe-main-dish-name">Runway Fries</span>
-                    <span id="cafe-automation-pill" class="cafe-chip-pill">Automation: OFF</span>
-                </div>
-            </header>
-
-            <div id="cafe-instruction-ribbon" class="cafe-steps-banner show">
-                <div class="cafe-ribbon-steps">
-                    <span class="cafe-ribbon-step">① Tap the Potato Bin 🥔</span>
-                    <span class="cafe-ribbon-step">② Slice Potatoes 🔪</span>
-                    <span class="cafe-ribbon-step">③ Fry to Golden 🍟</span>
-                    <span class="cafe-ribbon-step">④ Tap Pass Window 📦</span>
-                    <span class="cafe-ribbon-step">⑤ Tap Order Card ✔</span>
-                </div>
-                <div class="cafe-ribbon-actions">
-                    <button id="cafe-ribbon-close">Hide</button>
-                    <button id="cafe-ribbon-show" class="hidden">Show Tips</button>
-                </div>
-            </div>
-
-            <main class="cafe-lanes">
-                <section class="lane lane-orders">
-                    <div class="lane-header">
-                        <h3>Orders</h3>
-                        <div class="lane-subtext">Customers queue here. Watch patience.</div>
-                    </div>
-                    <div id="cafe-orders-list" class="order-list"></div>
-                </section>
-
-                <section class="lane lane-kitchen">
-                    <div class="lane-header">
-                        <h3>Kitchen Line</h3>
-                        <div class="lane-subtext">🥔 Bin → 🔥 Fryer → 📦 Pass</div>
-                    </div>
-                    <div class="kitchen-row">
-                        <button class="station" id="station-potato-bin" data-type="potato">
-                            <div class="station-icon">🥔</div>
-                            <div class="station-label">Potato Bin</div>
-                            <div class="station-hint">Tap to grab potatoes</div>
-                        </button>
-                        <button class="station" id="station-slicer" data-type="slicer">
-                            <div class="station-icon">🔪</div>
-                            <div class="station-label">Prep</div>
-                            <div class="station-hint">Prep strips</div>
-                        </button>
-                        <button class="station" id="station-fryer" data-type="fryer">
-                            <div class="station-icon">🔥</div>
-                            <div class="station-label">Fryer</div>
-                            <div class="station-hint">Cook fries</div>
-                        </button>
-                        <div class="station" id="station-pass" aria-hidden="true">
-                            <div class="station-icon">📦</div>
-                            <div class="station-label">Pass</div>
-                            <div class="station-hint">Ready pick-up</div>
-                        </div>
-                    </div>
-                    <div id="kitchen-items-layer"></div>
-                    <div id="worker-layer">
-                        <span id="worker-prep" class="worker hidden">🧑‍🍳</span>
-                        <span id="worker-runner" class="worker hidden">🏃‍♂️</span>
-                        <span id="worker-cashier" class="worker hidden">🧾</span>
-                    </div>
-                    <div class="carry-status">
-                        <div id="carry-counter" class="carry-counter">Carrying: 0</div>
-                        <div class="carry-capacity"><span id="cafe-carry-badge">Carrying 0</span> <span id="cafe-capacity-text"></span></div>
-                    </div>
-                </section>
-
-                <section class="lane lane-service">
-                    <div class="lane-header">
-                        <h3>Pass & Cash</h3>
-                        <div class="lane-subtext">Finish plates, tap cash</div>
-                    </div>
-                    <div id="cafe-pass-window" class="pass-window">
-                        <div class="stack-label">Pass Window</div>
-                        <div id="cafe-dish-stack" class="pass-slots"></div>
-                    </div>
-                    <div id="cafe-ready-list" class="hidden"></div>
-                    <div id="cafe-table-area">
-                        <div id="cash-label">Cash</div>
-                        <div id="cafe-customer-tables"></div>
-                        <button id="cafe-cash-stack" class="cash-stack">💵</button>
-                    </div>
-                </section>
-            </main>
-
-            <footer class="cafe-footer">
-                <button class="button-5" id="cafe-upgrades-btn">Hire Staff</button>
-                <button class="button-5" id="cafe-open-tutorial">How to Play</button>
-                <button class="button-5" id="return-to-world-btn">Exit Café</button>
-            </footer>
-        </div>
-
-        <div id="cafe-branch-banner" class="hidden">
-            <div id="cafe-branch-title">Fajr's Café · Istanbul</div>
-            <div id="cafe-branch-menu"></div>
-        </div>
-
-        <div id="cafe-tutorial-overlay" class="hidden">
-            <div class="tutorial-card">
-                <h3>Quick Onboarding</h3>
-                <ol class="tutorial-list">
-                    <li>Tap <strong>Potato Bin</strong> to pick up 1 potato (or click loose potatoes).</li>
-                    <li>Tap <strong>Prep Station</strong> to slice what you carry.</li>
-                    <li>Tap the <strong>Fryer</strong> to cook and send dishes to the pass.</li>
-                    <li>Tap the <strong>Order Card</strong> to serve from the pass and collect 💵.</li>
-                </ol>
-                <button id="cafe-close-tutorial">Got it</button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- DIALOGS -->
-    <div id="souvenirs-container" class="dialog-container hidden">
-        <div id="exit-dialog-btn" data-dialog="souvenirs-container">X</div>
-        <h3>Souvenirs</h3>
-        <div id="souvenirs-list"></div>
-    </div>
-    
-    <div id="officer-message" class="dialog-container hidden">
-        <div id="officer-emoji">👮</div>
-        <div id="speech-bubble">You must have a passport to travel</div>
-    </div>
-
-    <div id="passport-dialog" class="dialog-container hidden green-felt-bg">
-        <h3>Passport Office</h3>
-        <button id="apply-passport-btn" class="button-5" role="button">Apply for passport $200</button>
-    </div>
-
-    <div id="minigames-dialog-selection" class="dialog-container hidden green-felt-bg">
-        <div id="exit-dialog-btn" data-dialog="minigames-dialog-selection">X</div>
-        <h3 class="elegant-title">Minigames</h3>
-        <div id="minigames-controls">
-            <button id="memory-match-btn" class="button-5" role="button" data-unlock-text="Visit 2 Cities">Memory Match</button>
-            <button id="gem-swap-btn" class="button-5" role="button" data-unlock-text="Visit 5 Cities">Gem Swap</button>
-        </div>
-    </div>
-
-    <div id="minigame-dialog" class="dialog-container hidden green-felt-bg">
-        <div id="exit-dialog-btn" data-dialog="minigame-dialog">X</div>
-        <div id="minigame-container">
-             <h2 class="elegant-title">Fajr's Café</h2>
-            <div id="minigame-header">
-                <h3 id="minigame-title" style="display: none;"></h3>
-                <p id="minigame-instructions">Drag food to the bag and earn money!</p>
-            </div>
-            <div id="minigame-content">
-                <div id="fries-container"></div>
-                <div id="bag-dropzone">🛍️</div>
-            </div>
-        </div>
-    </div>
-
-    <div id="staff-dialog" class="dialog-container hidden">
-        <div id="exit-dialog-btn" data-dialog="staff-dialog">X</div>
-        <h3>Manage Staff</h3>
-        <p id="staff-status">You have no employees.</p>
-        <div id="staff-controls">
-            <button id="hire-worker-btn" class="action-button">Hire Chef ($1000)</button>
-            <button id="promote-worker-btn" class="action-button hidden">Promote Chef</button>
-        </div>
-    </div>
-    
-    <!-- NEW: Memory Game Dialog -->
-    <div id="memory-game-dialog" class="dialog-container hidden green-felt-bg">
-        <div id="exit-dialog-btn" data-dialog="memory-game-dialog">X</div>
-        <h3>Memory Match</h3>
-        <p>Match pairs of souvenirs and recipes! (+$50 per match)</p>
-        <div id="memory-game-grid"></div>
-    </div>
-
-    <!-- NEW: Gem Swap Game Dialog -->
-    <div id="gem-swap-dialog" class="dialog-container hidden green-felt-bg">
-        <div id="exit-dialog-btn" data-dialog="gem-swap-dialog">X</div>
-        <h3>Gem Swap</h3>
-        <p>Swap gems to match 3 or more! (+$10 per gem)</p>
-        <div id="gem-swap-grid"></div>
-    </div>
-
-
-    <div id="settings-dialog" class="dialog-container hidden">
-        <div id="exit-dialog-btn" data-dialog="settings-dialog">X</div>
-        <h3>Settings</h3>
-        <div class="settings-row">
-            <label for="player-name-input">Your Name</label>
-            <input type="text" id="player-name-input" value="Person" maxlength="15">
-        </div>
-        <div class="settings-row">
-            <span class="settings-heading">Choose Your Traveler</span>
-            <div id="player-emoji-options" role="group" aria-label="Choose your traveler emoji">
-                <button type="button" class="emoji-option-button" data-emoji-option="🧍">🧍</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🧕">🧕</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🧑‍✈️">🧑‍✈️</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🤖">🤖</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="👩‍🦽">👩‍🦽</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🧑‍🦯">🧑‍🦯</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="👽">👽</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🧳">🧳</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🕺">🕺</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="💃">💃</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🧑‍🎨">🧑‍🎨</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🧑‍🚀">🧑‍🚀</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🕵️">🕵️</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🥷">🥷</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🧙">🧙</button>
-                <button type="button" class="emoji-option-button" data-emoji-option="🧑‍🎤">🧑‍🎤</button>
-            </div>
-        </div>
-        <div id="settings-controls">
-            <button id="sfx-mute-btn" class="button-5" role="button">🔊</button>
-            <button id="music-mute-btn" class="button-5" role="button">🎵</button>
-        </div>
-        <button id="settings-ok-btn" class="button-5" style="margin-top: 20px;">OK</button>
-    </div>
-
-    <div id="flights-dialog" class="dialog-container hidden">
-        <h3>Select a Destination</h3>
-        <div id="flights-container"></div>
-    </div>
-
-    <div id="restaurant-view-container" class="dialog-container hidden">
-        <div id="exit-dialog-btn" data-dialog="restaurant-view-container">X</div>
-        <img id="restaurant-image" src="" alt="Restaurant View">
-    </div>
-
-    <div id="gift-shop-dialog" class="dialog-container hidden red-felt-bg">
-        <h3>Gift Shop</h3>
-        <div id="gift-shop-items-container"></div>
-        <button id="exit-gift-shop-btn" class="action-button">Close</button>
-    </div>
-    
-    <div id="plane-animation" class="dialog-container hidden">
-        <div id="flight-animation-wrapper">
-             <span id="globe-emoji">🌍</span>
-             <span id="plane-emoji-anim">✈️</span>
-        </div>
-    </div>
-
-    <div id="success-message" class="dialog-container hidden">
-        <div id="success-emoji">✅</div>
-        <p id="success-text"></p>
-    </div>
-
-    <div id="passport-celebration">
-        <span id="celebration-passport-emoji">🛂</span>
-    </div>
-
-    <div id="visa-animation" class="dialog-container hidden">
-        <div id="visa-animation-container">
-            <span id="visa-passport-emoji">🛂</span>
-            <span id="visa-sticker-emoji"></span>
-        </div>
-    </div>
-    
-    <div id="cafe-upgrades-dialog" class="dialog-container hidden green-felt-bg">
-        <div id="exit-dialog-btn" data-dialog="cafe-upgrades-dialog">X</div>
-        <h3>Cafe Upgrades</h3>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button id="hire-collector-btn" class="button-5" role="button">Hire Collector ($500)</button>
-            <button id="hire-cook-btn" class="button-5" role="button">Hire Cook ($1500)</button>
-        </div>
-    </div>
-
-
-    <div id="recipe-celebration" class="hidden"></div>
-    <div id="memory-game-win-celebration" class="hidden"></div>
-
-
-    <!-- Worker Animation UI -->
-    <div id="worker-animation-container" class="hidden">
-        <h2 class="elegant-title">Fajr's Café</h2>
-        <div id="worker-animation-row">
-            <span id="worker-anim-chef">👨‍🍳</span>
-            <span id="worker-anim-bag">🛍️</span>
-        </div>
-    </div>
-
+  </head>
+  <body>
+    <div id="game-root"></div>
+    <div id="effects-layer"></div>
+    <div id="ambient-layer"></div>
     <script type="module" src="/index.tsx"></script>
-</body>
+  </body>
 </html>
