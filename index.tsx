@@ -642,15 +642,10 @@ function initCafe() {
 
   function deliverNextAuto() {
     if (!readyDishes.length) return;
-    let next = readyDishes.find((d) => d.bagged) || null;
-    if (!next) {
-      next = readyDishes[0];
-      next.bagged = true;
-      next.element.classList.add('bagged');
-    }
-    if (next) {
-      deliverDish(next);
-    }
+    // Only serve dishes the player has explicitly bagged
+    const next = readyDishes.find((d) => d.bagged);
+    if (!next) return;
+    deliverDish(next);
   }
 
   function deliverDish(item: ReadyDish) {
@@ -680,20 +675,28 @@ function initCafe() {
   }
 
   function handleServe(customer: Customer, dish: DishType) {
+    // Stop timers / chat
     cleanupCustomer(customer);
-    createParticles('heart', getCenter(customer.element).x, getCenter(customer.element).y - 20);
-    synth.play('serve');
     clearTimeout(customer.angerTimeout);
     customers = customers.filter((c) => c.id !== customer.id);
+
+    // Cute animation on the customer
+    const center = getCenter(customer.element);
+    createParticles('heart', center.x, center.y - 20);
+    synth.play('serve');
     customer.element.classList.remove('angry');
-    customer.element.animate(
-      [
-        { transform: 'scale(1)' },
-        { transform: 'scale(1.2) rotate(-8deg)' },
-        { transform: 'scale(1)' },
-      ],
-      { duration: 400 }
-    ).onfinish = () => customer.element.remove();
+    customer.element
+      .animate(
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(1.2) rotate(-8deg)' },
+          { transform: 'scale(1)' },
+        ],
+        { duration: 400 }
+      )
+      .onfinish = () => customer.element.remove();
+
+    // Combo logic
     const now = performance.now();
     if (now - lastServe < 3500) {
       combo += 1;
@@ -703,12 +706,28 @@ function initCafe() {
     lastServe = now;
     totalOrders += 1;
     if (combo > bestCombo) bestCombo = combo;
+
+    // Show combo banner
     tipComboEl.style.opacity = combo > 1 ? '1' : '0';
     tipComboEl.textContent = `✨ TIP COMBO x${combo}! ✨`;
+
+    // ---- CASH CALCULATION (this was the missing bit) ----
     const basePay = dish.value;
     const tip = combo > 1 ? combo * 4 : 0;
     const total = Math.round((basePay + tip) * tipBoost * tipBonusPermanent);
-    spawnCashToken(total, customer.element);
+
+    // Immediately grant the money
+    updateCash(total);
+    totalCashEarned += total;
+
+    // Little cash burst from the pass towards the HUD
+    const from = getCenter(stationPass);
+    createParticles('cash', from.x, from.y - 10);
+
+    // Optional: spawn a fun token, but it is purely visual now
+    spawnCashTokenVisual(from.x, from.y);
+
+    // XP
     updateXp(5);
   }
 
@@ -733,49 +752,36 @@ function initCafe() {
     customer.banterEl.classList.remove('show');
   }
 
-  function spawnCashToken(amount: number, origin: HTMLElement) {
-    const start = getCenter(origin);
+  // Visual-only floating cash chip (no game logic inside)
+  function spawnCashTokenVisual(x: number, y: number) {
     const token = document.createElement('div');
-    token.className = 'emoji-bubble collectible';
+    token.className = 'emoji-bubble';
     token.textContent = '💵';
-    token.style.transform = `translate(${start.x - 26}px, ${start.y - 26}px)`;
+    token.style.transform = `translate(${x - 26}px, ${y - 26}px)`;
     root.appendChild(token);
-    let collected = false;
-    const collect = () => {
-      if (collected) return;
-      collected = true;
-      token.style.pointerEvents = 'none';
-      const hud = getCenter(cashPile);
-      token
-        .animate(
-          [
-            { transform: `translate(${start.x - 26}px, ${start.y - 26}px) scale(1)` },
-            {
-              transform: `translate(${(start.x + hud.x) / 2 - 26}px, ${(start.y + hud.y) / 2 - 40}px) scale(1.2)`,
-            },
-            { transform: `translate(${hud.x - 26}px, ${hud.y - 26}px) scale(0.4)` },
-          ],
-          { duration: 500, easing: 'ease-in' }
-        )
-        .onfinish = () => token.remove();
-      updateCash(amount);
-      createParticles('cash', hud.x, hud.y);
-      synth.play('cash');
-    };
-    token.addEventListener('pointerdown', collect);
-    window.setTimeout(collect, 80);
-    if (staffState.runner) {
-      window.setTimeout(collect, 700);
-    } else {
-      window.setTimeout(() => {
-        if (!collected) {
-          collect();
-        }
-      }, 6000);
-    }
+
+    const hud = getCenter(cashPile);
+
+    token
+      .animate(
+        [
+          { transform: `translate(${x - 26}px, ${y - 26}px) scale(1)` },
+          {
+            transform: `translate(${(x + hud.x) / 2 - 26}px, ${(y + hud.y) / 2 - 40}px) scale(1.2)`,
+          },
+          { transform: `translate(${hud.x - 26}px, ${hud.y - 26}px) scale(0.4)` },
+        ],
+        { duration: 600, easing: 'ease-in' }
+      )
+      .onfinish = () => token.remove();
+
+    synth.play('cash');
   }
 
   function spawnCustomer() {
+    // Hard cap to keep UI clean & avoid lag
+    if (customers.length >= 5) return;
+
     const order = unlockedDishes[Math.floor(Math.random() * unlockedDishes.length)];
     const avatarPool = ['🙂', '🧕', '👳‍♂️', '🧑‍💼', '🤠', '😎'];
     const card = document.createElement('div');
@@ -875,12 +881,6 @@ function initCafe() {
       chaosActive = false;
     }, event.duration);
   }
-
-  setInterval(() => {
-    if (Math.random() > 0.5) {
-      spawnCustomer();
-    }
-  }, 12000);
 
   setInterval(() => {
     if (!chaosActive) {
