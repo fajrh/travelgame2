@@ -664,7 +664,35 @@ function initCafe() {
   }
 
   function deliverDish(item: ReadyDish) {
-    if (!customers.length) return false;
+    if (!customers.length) {
+      readyDishes = readyDishes.filter((d) => d.id !== item.id);
+      item.element.remove();
+
+      // Treat this as an instant pickup: pay out and throw a cash token to the HUD
+      const from = getCenter(stationPass);
+      const to = getCenter(cashPile);
+      const token = document.createElement('div');
+      token.className = 'emoji-bubble';
+      token.textContent = item.dish.cooked;
+      token.style.transform = `translate(${from.x - 26}px, ${from.y - 26}px)`;
+      effectsLayer.appendChild(token);
+      token
+        .animate(
+          [
+            { transform: `translate(${from.x - 26}px, ${from.y - 26}px) scale(1)` },
+            {
+              transform: `translate(${(from.x + to.x) / 2 - 26}px, ${(from.y + to.y) / 2 - 70}px) rotate(-8deg) scale(1.15)`,
+            },
+            { transform: `translate(${to.x - 26}px, ${to.y - 26}px) scale(0.6)` },
+          ],
+          { duration: 520, easing: 'ease-out' }
+        )
+        .onfinish = () => token.remove();
+
+      grantServeRewards(item.dish);
+      synth.play('cash');
+      return true;
+    }
 
     // Prefer a customer who ordered this dish, otherwise serve the first
     let customer = customers.find((c) => c.order === item.dish);
@@ -694,28 +722,7 @@ function initCafe() {
     return true;
   }
 
-  function handleServe(customer: Customer, dish: DishType) {
-    // Stop timers / chat
-    cleanupCustomer(customer);
-    clearTimeout(customer.angerTimeout);
-    customers = customers.filter((c) => c.id !== customer.id);
-
-    // Cute animation on the customer
-    const center = getCenter(customer.element);
-    createParticles('heart', center.x, center.y - 20);
-    synth.play('serve');
-    customer.element.classList.remove('angry');
-    customer.element
-      .animate(
-        [
-          { transform: 'scale(1)' },
-          { transform: 'scale(1.2) rotate(-8deg)' },
-          { transform: 'scale(1)' },
-        ],
-        { duration: 400 }
-      )
-      .onfinish = () => customer.element.remove();
-
+  function grantServeRewards(dish: DishType) {
     // Combo logic
     const now = performance.now();
     if (now - lastServe < 3500) {
@@ -749,6 +756,31 @@ function initCafe() {
 
     // XP
     updateXp(5);
+  }
+
+  function handleServe(customer: Customer, dish: DishType) {
+    // Stop timers / chat
+    cleanupCustomer(customer);
+    clearTimeout(customer.angerTimeout);
+    customers = customers.filter((c) => c.id !== customer.id);
+
+    // Cute animation on the customer
+    const center = getCenter(customer.element);
+    createParticles('heart', center.x, center.y - 20);
+    synth.play('serve');
+    customer.element.classList.remove('angry');
+    customer.element
+      .animate(
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(1.2) rotate(-8deg)' },
+          { transform: 'scale(1)' },
+        ],
+        { duration: 400 }
+      )
+      .onfinish = () => customer.element.remove();
+
+    grantServeRewards(dish);
   }
 
   function attemptServeQueue() {
